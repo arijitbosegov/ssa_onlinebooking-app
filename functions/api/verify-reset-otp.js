@@ -11,6 +11,15 @@ function bytesToHex(bytes) {
         .join("");
 }
 
+async function sha256(value) {
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(value)
+    );
+
+    return bytesToHex(new Uint8Array(digest));
+}
+
 async function hashOTP(userId, otp, secret) {
     const key = await crypto.subtle.importKey(
         "raw",
@@ -50,9 +59,19 @@ export async function onRequestPost({ request, env }) {
             }, 500);
         }
 
+        if (!request.headers.get("content-type")?.includes("application/json")) {
+            return json({
+                success: false,
+                message: "JSON request required."
+            }, 415);
+        }
+
         const data = await request.json();
 
-        const email = String(data.email || "").trim().toLowerCase();
+        const email = String(data.email || "")
+            .trim()
+            .toLowerCase();
+
         const otp = String(data.otp || "").trim();
 
         if (
@@ -112,6 +131,7 @@ export async function onRequestPost({ request, env }) {
                 UPDATE password_reset_challenges
                 SET attempts = attempts + 1
                 WHERE id = ?
+                  AND verified_at IS NULL
                   AND attempts < 5
             `).bind(challenge.id).run();
 
@@ -121,26 +141,49 @@ export async function onRequestPost({ request, env }) {
             }, 400);
         }
 
-        // Mark OTP as verified. The password-reset endpoint
-        // will require this verification before changing a password.
-        await env.DB.prepare(`
+        // Generate a random, temporary reset token.
+        const randomBytes = crypto.getRandomValues(
+            new Uint8Array(32)
+        );
+
+        const resetToken = bytesToHex(randomBytes);
+        const resetTokenHash = await sha256(resetToken);
+        const verifiedAt = new Date().toISOString();
+
+        // Save only the token hash and consume the OTP.
+        const updateResult = await env.DB.prepare(`
             UPDATE password_reset_challenges
-            SET verified_at = ?
+            SET verified_at = ?,
+                reset_token_hash = ?
             WHERE id = ?
               AND verified_at IS NULL
               AND attempts < 5
+              AND datetime(expires_at) > datetime('now')
         `).bind(
-            new Date().toISOString(),
+            verifiedAt,
+            resetTokenHash,
             challenge.id
         ).run();
 
+        if (updateResult.meta.changes !== 1) {
+            return json({
+                success: false,
+                message: "OTP has expired or has already been used. Request a new code."
+            }, 400);
+        }
+
         return json({
             success: true,
-            message: "OTP verified successfully. You may now reset your password."
+            message: "OTP verified successfully. You may now reset your password.",
+            resetToken,
+            resetTokenExpiresInSeconds: 600
         });
 
     } catch (error) {
-        console.error("RESET OTP VERIFICATION FAILURE:", error.message);
+        console.error(
+            "RESET OTP VERIFICATION FAILURE:",
+            error.message
+        );
 
         return json({
             success: false,
