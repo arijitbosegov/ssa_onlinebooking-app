@@ -56,7 +56,7 @@ async function hashPassword(password) {
         256
     );
 
-    return `pbkdf2$310000$${bytesToBase64(salt)}$${bytesToBase64(new Uint8Array(derived))}`;
+    return `pbkdf2$100000$${bytesToBase64(salt)}$${bytesToBase64(new Uint8Array(derived))}`;
 }
 
 async function hashOTP(userId, otp, secret) {
@@ -78,15 +78,11 @@ async function hashOTP(userId, otp, secret) {
 }
 
 export async function onRequestPost({ request, env }) {
-
     let userId = null;
     let stage = "configuration";
 
     try {
-
-        // 1. Check Cloudflare bindings and secrets
         if (!env.DB || !env.RESEND_API_KEY || !env.OTP_HMAC_SECRET) {
-
             console.error("Missing server configuration:", {
                 DB: !!env.DB,
                 RESEND_API_KEY: !!env.RESEND_API_KEY,
@@ -99,7 +95,6 @@ export async function onRequestPost({ request, env }) {
             }, 500);
         }
 
-        // 2. Validate request content type
         stage = "request_validation";
 
         if (!request.headers.get("content-type")?.includes("application/json")) {
@@ -111,7 +106,6 @@ export async function onRequestPost({ request, env }) {
 
         const data = await request.json();
 
-        // 3. Read and normalise registration details
         stage = "input_validation";
 
         const fullName = String(data.fullName || "").trim();
@@ -121,39 +115,23 @@ export async function onRequestPost({ request, env }) {
         const password = String(data.password || "");
 
         const allowedCategories = [
-            "OFFICER",
-            "JCO",
-            "OR",
-            "DEPENDANT",
-            "GUEST"
+            "OFFICER", "JCO", "OR", "DEPENDANT", "GUEST"
         ];
 
         if (!fullName || fullName.length > 100) {
-            return json({
-                success: false,
-                message: "Enter a valid full name."
-            }, 400);
+            return json({ success: false, message: "Enter a valid full name." }, 400);
         }
 
         if (!/^\+?[1-9]\d{9,14}$/.test(mobile)) {
-            return json({
-                success: false,
-                message: "Enter a valid mobile number."
-            }, 400);
+            return json({ success: false, message: "Enter a valid mobile number." }, 400);
         }
 
         if (!validEmail(email) || email.length > 254) {
-            return json({
-                success: false,
-                message: "Enter a valid email address."
-            }, 400);
+            return json({ success: false, message: "Enter a valid email address." }, 400);
         }
 
         if (!allowedCategories.includes(category)) {
-            return json({
-                success: false,
-                message: "Invalid user category."
-            }, 400);
+            return json({ success: false, message: "Invalid user category." }, 400);
         }
 
         if (password.length < 12 || password.length > 128) {
@@ -163,7 +141,6 @@ export async function onRequestPost({ request, env }) {
             }, 400);
         }
 
-        // 4. Check for an existing account
         stage = "database_lookup";
 
         const existing = await env.DB.prepare(
@@ -177,32 +154,20 @@ export async function onRequestPost({ request, env }) {
             }, 409);
         }
 
-        // 5. Hash password
         stage = "password_hashing";
 
         const passwordHash = await hashPassword(password);
 
-        // 6. Create user record
         stage = "user_insertion";
 
         const userResult = await env.DB.prepare(`
             INSERT INTO users (
-                full_name,
-                mobile,
-                email,
-                password_hash,
-                category,
-                mobile_verified,
-                email_verified,
-                status
+                full_name, mobile, email, password_hash, category,
+                mobile_verified, email_verified, status
             )
             VALUES (?, ?, ?, ?, ?, 0, 0, 'ACTIVE')
         `).bind(
-            fullName,
-            mobile,
-            email,
-            passwordHash,
-            category
+            fullName, mobile, email, passwordHash, category
         ).run();
 
         userId = userResult.meta.last_row_id;
@@ -211,45 +176,27 @@ export async function onRequestPost({ request, env }) {
             throw new Error("User creation failed.");
         }
 
-        console.log("Registration user record created.");
-
-        // 7. Generate secure email OTP
         stage = "otp_generation";
 
         const otp = String(
             crypto.getRandomValues(new Uint32Array(1))[0] % 1000000
         ).padStart(6, "0");
 
-        const otpHash = await hashOTP(
-            userId,
-            otp,
-            env.OTP_HMAC_SECRET
-        );
+        const otpHash = await hashOTP(userId, otp, env.OTP_HMAC_SECRET);
 
         const expiresAt = new Date(
             Date.now() + 5 * 60 * 1000
         ).toISOString();
 
-        // 8. Store OTP challenge
         stage = "otp_storage";
 
         await env.DB.prepare(`
             INSERT INTO verification_challenges (
-                user_id,
-                channel,
-                otp_hash,
-                expires_at
+                user_id, channel, otp_hash, expires_at
             )
             VALUES (?, 'EMAIL', ?, ?)
-        `).bind(
-            userId,
-            otpHash,
-            expiresAt
-        ).run();
+        `).bind(userId, otpHash, expiresAt).run();
 
-        console.log("Email OTP challenge stored.");
-
-        // 9. Send OTP using Resend
         stage = "resend_email";
 
         const safeName = escapeHTML(fullName);
@@ -264,11 +211,8 @@ export async function onRequestPost({ request, env }) {
                 },
                 body: JSON.stringify({
                     from: "SAPTA SHAKTI AUDITORIUM <onboarding@resend.dev>",
-
                     to: [email],
-
                     subject: "Your SAPTA SHAKTI AUDITORIUM verification code",
-
                     html: `
                         <div style="font-family:Arial,sans-serif;padding:25px">
                             <h2>SAPTA SHAKTI AUDITORIUM</h2>
@@ -279,14 +223,12 @@ export async function onRequestPost({ request, env }) {
                             <p>If you did not request this code, please ignore this email.</p>
                         </div>
                     `,
-
                     text: `Dear ${fullName}, your SAPTA SHAKTI AUDITORIUM verification OTP is ${otp}. It expires in 5 minutes.`
                 })
             }
         );
 
         if (!emailResponse.ok) {
-
             const resendError = await emailResponse.text();
 
             console.error("RESEND DELIVERY ERROR:", {
@@ -294,14 +236,11 @@ export async function onRequestPost({ request, env }) {
                 response: resendError
             });
 
-            throw new Error(
-                `Resend rejected the request. HTTP ${emailResponse.status}`
-            );
+            throw new Error(`Resend rejected the request. HTTP ${emailResponse.status}`);
         }
 
-        console.log("Resend accepted the OTP email request.");
+        console.log("Registration and OTP email request successful.");
 
-        // 10. Registration successful
         return json({
             success: true,
             message: "Registration initiated. Check your email for the verification code.",
@@ -310,35 +249,23 @@ export async function onRequestPost({ request, env }) {
         }, 201);
 
     } catch (error) {
-
-        // 11. Log the actual failure stage
         console.error("REGISTRATION FAILURE:", {
             stage,
             error: error?.message || String(error)
         });
 
-        // 12. Clean up incomplete registration
         if (userId && env.DB) {
-
             try {
-
                 await env.DB.batch([
                     env.DB.prepare(
                         "DELETE FROM verification_challenges WHERE user_id = ?"
                     ).bind(userId),
-
                     env.DB.prepare(
                         "DELETE FROM users WHERE id = ? AND email_verified = 0"
                     ).bind(userId)
                 ]);
-
-                console.log("Incomplete registration cleaned up.");
-
             } catch (cleanupError) {
-
-                console.error("REGISTRATION CLEANUP FAILURE:", {
-                    error: cleanupError?.message || String(cleanupError)
-                });
+                console.error("REGISTRATION CLEANUP FAILURE:", cleanupError.message);
             }
         }
 
