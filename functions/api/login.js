@@ -62,7 +62,7 @@ async function verifyPassword(password, storedHash) {
             {
                 name: "PBKDF2",
                 salt,
-                iterations: 310000,
+                iterations: 100000,
                 hash: "SHA-256"
             },
             key,
@@ -74,7 +74,8 @@ async function verifyPassword(password, storedHash) {
             expected
         );
 
-    } catch {
+    } catch (error) {
+        console.error("PASSWORD VERIFICATION ERROR:", error.message);
         return false;
     }
 }
@@ -200,6 +201,7 @@ export async function onRequestPost({ request, env }) {
               AND datetime(expires_at) <= datetime('now')
         `).bind(user.id).run();
 
+        // Create new session.
         await env.DB.prepare(`
             INSERT INTO sessions (
                 user_id,
@@ -234,6 +236,8 @@ export async function onRequestPost({ request, env }) {
         });
 
     } catch (error) {
+        console.error("LOGIN FAILURE:", error.message);
+
         return json({
             success: false,
             message: "Unable to process login. Please try again."
