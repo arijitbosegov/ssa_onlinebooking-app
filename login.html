@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Login | SAPTA SHAKTI AUDITORIUM</title>
 
   <style>
@@ -39,6 +40,7 @@
       color: #e2b75e;
       font-size: 25px;
       letter-spacing: 1px;
+      line-height: 1.4;
     }
 
     .subtitle {
@@ -81,6 +83,7 @@
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
+      transition: background 0.2s;
     }
 
     button:hover {
@@ -117,6 +120,12 @@
     .links a:hover {
       text-decoration: underline;
     }
+
+    .forgot-link {
+      display: inline-block;
+      margin-bottom: 12px;
+      font-weight: bold;
+    }
   </style>
 </head>
 
@@ -131,6 +140,7 @@
     <form id="loginForm">
 
       <label for="email">Email Address</label>
+
       <input
         type="email"
         id="email"
@@ -141,6 +151,7 @@
       >
 
       <label for="password">Password</label>
+
       <input
         type="password"
         id="password"
@@ -159,10 +170,23 @@
     <div id="message" role="status" aria-live="polite"></div>
 
     <div class="links">
+
+      <a
+        href="forgot-password.html"
+        class="forgot-link"
+      >
+        Forgot Password?
+      </a>
+
+      <br>
+
       Don't have an account?
       <a href="register.html">Register Here</a>
+
       <br>
+
       <a href="index.html">Back to Home</a>
+
     </div>
 
   </div>
@@ -175,27 +199,43 @@
     function showMessage(message, success = false) {
       messageBox.style.display = "block";
       messageBox.textContent = message;
-      messageBox.style.background = success ? "#173f32" : "#57232b";
+
+      messageBox.style.background = success
+        ? "#173f32"
+        : "#57232b";
+
       messageBox.style.color = "#ffffff";
     }
 
     loginForm.addEventListener("submit", async function(event) {
+
       event.preventDefault();
 
       loginButton.disabled = true;
       loginButton.textContent = "PLEASE WAIT...";
+
       messageBox.style.display = "none";
 
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+      const email = document
+        .getElementById("email")
+        .value
+        .trim();
+
+      const password = document
+        .getElementById("password")
+        .value;
 
       try {
+
         const response = await fetch("/api/login", {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json"
           },
+
           credentials: "same-origin",
+
           body: JSON.stringify({
             email: email,
             password: password
@@ -206,24 +246,31 @@
 
         if (!response.ok || !result.success) {
           throw new Error(
-            result.message || "Login failed. Please check your credentials."
+            result.message ||
+            "Login failed. Please check your credentials."
           );
         }
 
-        showMessage("Login successful. Redirecting...", true);
+        showMessage(
+          "Login successful. Redirecting...",
+          true
+        );
 
         setTimeout(function() {
           window.location.href = "index.html";
         }, 1000);
 
       } catch (error) {
+
         showMessage(
-          error.message || "Unable to log in. Please try again."
+          error.message ||
+          "Unable to log in. Please try again."
         );
 
         loginButton.disabled = false;
         loginButton.textContent = "LOGIN";
       }
+
     });
   </script>
 
