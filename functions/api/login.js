@@ -38,7 +38,7 @@ async function verifyPassword(password, storedHash) {
         if (
             parts.length !== 4 ||
             parts[0] !== "pbkdf2" ||
-            parts[1] !== "310000"
+            parts[1] !== "100000"
         ) {
             return false;
         }
