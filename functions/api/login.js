@@ -1,4 +1,6 @@
 
+const PBKDF2_ITERATIONS = 100000;
+
 const json = (data, status = 200, extraHeaders = {}) =>
     Response.json(data, {
         status,
@@ -38,7 +40,7 @@ async function verifyPassword(password, storedHash) {
         if (
             parts.length !== 4 ||
             parts[0] !== "pbkdf2" ||
-            parts[1] !== "100000"
+            !["100000", "310000"].includes(parts[1])
         ) {
             return false;
         }
@@ -62,7 +64,7 @@ async function verifyPassword(password, storedHash) {
             {
                 name: "PBKDF2",
                 salt,
-                iterations: 100000,
+                iterations: PBKDF2_ITERATIONS,
                 hash: "SHA-256"
             },
             key,
@@ -98,10 +100,7 @@ export async function onRequestPost({ request, env }) {
             }, 500);
         }
 
-        if (
-            !request.headers.get("content-type")
-                ?.includes("application/json")
-        ) {
+        if (!request.headers.get("content-type")?.includes("application/json")) {
             return json({
                 success: false,
                 message: "JSON request required."
@@ -179,14 +178,30 @@ export async function onRequestPost({ request, env }) {
             }, 403);
         }
 
+        // Correct the legacy iteration label after successful verification.
+        const hashParts = user.password_hash.split("$");
+
+        if (hashParts[1] === "310000") {
+            const correctedHash = [
+                "pbkdf2",
+                "100000",
+                hashParts[2],
+                hashParts[3]
+            ].join("$");
+
+            await env.DB.prepare(`
+                UPDATE users
+                SET password_hash = ?
+                WHERE id = ?
+            `).bind(correctedHash, user.id).run();
+        }
+
         // Generate a cryptographically secure session token.
         const randomBytes = crypto.getRandomValues(
             new Uint8Array(32)
         );
 
         const sessionToken = bytesToHex(randomBytes);
-
-        // Store only the SHA-256 hash in D1.
         const tokenHash = await sha256(sessionToken);
 
         // Seven-day persistent session.
@@ -194,14 +209,12 @@ export async function onRequestPost({ request, env }) {
             Date.now() + 7 * 24 * 60 * 60 * 1000
         ).toISOString();
 
-        // Remove expired sessions for this user.
         await env.DB.prepare(`
             DELETE FROM sessions
             WHERE user_id = ?
               AND datetime(expires_at) <= datetime('now')
         `).bind(user.id).run();
 
-        // Create new session.
         await env.DB.prepare(`
             INSERT INTO sessions (
                 user_id,
