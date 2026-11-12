@@ -1,0 +1,333 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register | SAPTA SHAKTI AUDITORIUM</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #101827;
+    color: white;
+    min-height: 100vh;
+}
+
+header {
+    background: #1b304d;
+    text-align: center;
+    padding: 35px 15px;
+}
+
+header h1 {
+    color: #e2b75e;
+    font-size: clamp(23px, 4vw, 36px);
+    letter-spacing: 2px;
+    margin: 0 0 12px;
+}
+
+header p { margin: 0; font-size: 16px; }
+
+.container {
+    width: min(92%, 520px);
+    margin: 35px auto;
+    padding: 30px;
+    background: #192435;
+    border-radius: 12px;
+    border: 1px solid #35445a;
+}
+
+h2 {
+    text-align: center;
+    margin-top: 0;
+}
+
+label {
+    display: block;
+    margin: 17px 0 7px;
+    font-weight: bold;
+}
+
+input, select {
+    width: 100%;
+    padding: 13px;
+    border-radius: 6px;
+    border: 1px solid #526078;
+    background: #101827;
+    color: white;
+    font-size: 16px;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 23px;
+    background: #a5282c;
+    border: none;
+    border-radius: 7px;
+    color: white;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+button:hover:not(:disabled) {
+    background: #c13a3e;
+}
+
+#otpSection { display: none; }
+
+#message {
+    margin-top: 18px;
+    text-align: center;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.success { color: #55d99a; }
+.error { color: #ff7777; }
+
+.links {
+    text-align: center;
+    margin-top: 22px;
+}
+
+a { color: #e2b75e; }
+
+footer {
+    text-align: center;
+    padding: 20px;
+    color: #aab3c0;
+    font-size: 13px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>SAPTA SHAKTI AUDITORIUM</h1>
+    <p>ONLINE MOVIE TICKET BOOKING</p>
+</header>
+
+<div class="container">
+
+    <h2 id="formHeading">Create Your Account</h2>
+
+    <form id="registerForm">
+
+        <label for="fullName">Full Name</label>
+        <input id="fullName" type="text"
+               maxlength="100" autocomplete="name" required>
+
+        <label for="mobile">Mobile Number</label>
+        <input id="mobile" type="tel"
+               placeholder="10-digit mobile number"
+               autocomplete="tel" required>
+
+        <label for="email">Email Address</label>
+        <input id="email" type="email"
+               autocomplete="email" required>
+
+        <label for="category">User Category</label>
+        <select id="category" required>
+            <option value="">Select Category</option>
+            <option value="OFFICER">Officer</option>
+            <option value="JCO">JCO</option>
+            <option value="OR">OR</option>
+            <option value="DEPENDANT">Dependant</option>
+            <option value="GUEST">Guest</option>
+        </select>
+
+        <label for="password">Password</label>
+        <input id="password" type="password"
+               minlength="12" maxlength="128"
+               autocomplete="new-password" required>
+
+        <label for="confirmPassword">Confirm Password</label>
+        <input id="confirmPassword" type="password"
+               minlength="12" maxlength="128"
+               autocomplete="new-password" required>
+
+        <button id="registerButton" type="submit">
+            REGISTER
+        </button>
+
+    </form>
+
+    <section id="otpSection">
+        <h2>Verify Your Email</h2>
+
+        <p style="text-align:center">
+            A six-digit verification code has been sent to your email.
+            Please enter it below.
+        </p>
+
+        <label for="otp">Email Verification OTP</label>
+        <input id="otp" type="text"
+               inputmode="numeric"
+               autocomplete="one-time-code"
+               maxlength="6"
+               placeholder="Enter 6-digit OTP">
+
+        <button id="verifyButton" type="button">
+            VERIFY EMAIL
+        </button>
+    </section>
+
+    <div id="message" role="status" aria-live="polite"></div>
+
+    <div class="links">
+        <a href="index.html">Back to Home</a>
+    </div>
+
+</div>
+
+<footer>
+    SAPTA SHAKTI AUDITORIUM
+</footer>
+
+<script>
+const registerForm = document.getElementById("registerForm");
+const otpSection = document.getElementById("otpSection");
+const message = document.getElementById("message");
+
+const registerButton = document.getElementById("registerButton");
+const verifyButton = document.getElementById("verifyButton");
+
+let currentUserId = null;
+
+function showMessage(text, type) {
+    message.textContent = text;
+    message.className = type;
+}
+
+registerForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const fullName = document.getElementById("fullName").value.trim();
+    const mobile = document.getElementById("mobile").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const category = document.getElementById("category").value;
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+
+    if (password !== confirmPassword) {
+        showMessage("Passwords do not match.", "error");
+        return;
+    }
+
+    if (password.length < 12) {
+        showMessage("Password must contain at least 12 characters.", "error");
+        return;
+    }
+
+    registerButton.disabled = true;
+    registerButton.textContent = "PLEASE WAIT...";
+    showMessage("Submitting registration...", "");
+
+    try {
+        const response = await fetch("/api/register", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                fullName,
+                mobile,
+                email,
+                category,
+                password
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || "Registration failed.");
+        }
+
+        currentUserId = result.userId;
+
+        registerForm.style.display = "none";
+        otpSection.style.display = "block";
+
+        document.getElementById("formHeading").textContent =
+            "Registration Submitted";
+
+        showMessage(
+            "Registration successful. Please check your email for the OTP.",
+            "success"
+        );
+
+    } catch (error) {
+        showMessage(error.message || "Unable to register. Please try again.", "error");
+    } finally {
+        registerButton.disabled = false;
+        registerButton.textContent = "REGISTER";
+    }
+});
+
+verifyButton.addEventListener("click", async function() {
+
+    const otp = document.getElementById("otp").value.trim();
+
+    if (!/^\d{6}$/.test(otp)) {
+        showMessage("Please enter a valid six-digit OTP.", "error");
+        return;
+    }
+
+    if (!currentUserId) {
+        showMessage("Registration session unavailable. Please register again.", "error");
+        return;
+    }
+
+    verifyButton.disabled = true;
+    verifyButton.textContent = "VERIFYING...";
+
+    try {
+        const response = await fetch("/api/verify-otp", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                userId: currentUserId,
+                otp
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || "OTP verification failed.");
+        }
+
+        otpSection.style.display = "none";
+
+        showMessage(
+            "Email verified successfully! Your registration is complete. You can now log in.",
+            "success"
+        );
+
+        currentUserId = null;
+
+    } catch (error) {
+        showMessage(error.message || "Verification failed. Please try again.", "error");
+    } finally {
+        verifyButton.disabled = false;
+        verifyButton.textContent = "VERIFY EMAIL";
+    }
+});
+</script>
+
+</body>
+</html>
