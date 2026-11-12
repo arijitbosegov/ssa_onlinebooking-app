@@ -101,7 +101,12 @@ export async function onRequestPost({ request, env }) {
         }
 
         const challenge = await env.DB.prepare(`
-            SELECT id, otp_hash, expires_at, attempts, verified_at
+            SELECT
+                id,
+                otp_hash,
+                expires_at,
+                attempts,
+                verified_at
             FROM password_reset_challenges
             WHERE user_id = ?
             ORDER BY id DESC
@@ -141,20 +146,29 @@ export async function onRequestPost({ request, env }) {
             }, 400);
         }
 
-        // Generate a random, temporary reset token.
+        // Generate a cryptographically secure temporary reset token.
         const randomBytes = crypto.getRandomValues(
             new Uint8Array(32)
         );
 
         const resetToken = bytesToHex(randomBytes);
+
+        // Store only the SHA-256 hash of the token.
         const resetTokenHash = await sha256(resetToken);
+
         const verifiedAt = new Date().toISOString();
 
-        // Save only the token hash and consume the OTP.
+        // The reset token remains valid for 10 minutes.
+        const resetTokenExpiresAt = new Date(
+            Date.now() + 10 * 60 * 1000
+        ).toISOString();
+
+        // Verify the OTP and save the token and its expiry.
         const updateResult = await env.DB.prepare(`
             UPDATE password_reset_challenges
             SET verified_at = ?,
-                reset_token_hash = ?
+                reset_token_hash = ?,
+                reset_token_expires_at = ?
             WHERE id = ?
               AND verified_at IS NULL
               AND attempts < 5
@@ -162,6 +176,7 @@ export async function onRequestPost({ request, env }) {
         `).bind(
             verifiedAt,
             resetTokenHash,
+            resetTokenExpiresAt,
             challenge.id
         ).run();
 
