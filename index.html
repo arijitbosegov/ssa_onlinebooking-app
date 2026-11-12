@@ -4,8 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>SAPTA SHAKTI AUDITORIUM</title>
+
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             font-family: Arial, sans-serif;
@@ -13,17 +19,21 @@
             color: white;
             text-align: center;
         }
+
         header {
             padding: 45px 15px;
             background: #192d46;
         }
+
         h1 {
             color: #d9b36c;
             letter-spacing: 2px;
         }
+
         main {
             padding: 45px 20px;
         }
+
         button {
             background: #a52a2a;
             color: white;
@@ -32,20 +42,183 @@
             border-radius: 6px;
             font-size: 16px;
             cursor: pointer;
+            margin: 10px;
+        }
+
+        button:hover {
+            background: #c03939;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #userInfo {
+            color: #e2b75e;
+            margin: 20px 0;
+            line-height: 1.7;
+        }
+
+        #message {
+            display: none;
+            margin: 20px auto;
+            max-width: 450px;
+            padding: 12px;
+            border-radius: 6px;
+            line-height: 1.5;
         }
     </style>
 </head>
+
 <body>
+
     <header>
         <h1>SAPTA SHAKTI AUDITORIUM</h1>
         <p>ONLINE MOVIE TICKET BOOKING</p>
     </header>
+
     <main>
+
         <h2>Welcome!</h2>
+
         <p>Book your movie tickets online.</p>
-        <button onclick="location.href='register.html'">
-            REGISTER / LOGIN
-        </button>
+
+        <div id="userInfo"></div>
+
+        <div id="actionArea">
+            <p>Checking your login status...</p>
+        </div>
+
+        <div id="message" role="status" aria-live="polite"></div>
+
     </main>
+
+    <script>
+
+        const actionArea = document.getElementById("actionArea");
+        const userInfo = document.getElementById("userInfo");
+        const messageBox = document.getElementById("message");
+
+        function showMessage(message, success = false) {
+
+            messageBox.style.display = "block";
+            messageBox.textContent = message;
+
+            messageBox.style.background = success
+                ? "#173f32"
+                : "#57232b";
+
+            messageBox.style.color = "#ffffff";
+        }
+
+        function showLoggedOut() {
+
+            userInfo.textContent = "";
+
+            actionArea.innerHTML = `
+                <button onclick="location.href='register.html'">
+                    REGISTER / LOGIN
+                </button>
+            `;
+        }
+
+        function showLoggedIn(user) {
+
+            userInfo.textContent =
+                "Welcome, " + user.fullName +
+                " | Category: " + user.category;
+
+            actionArea.innerHTML = `
+                <button id="logoutButton">
+                    LOGOUT
+                </button>
+            `;
+
+            document
+                .getElementById("logoutButton")
+                .addEventListener("click", logout);
+        }
+
+        async function checkLoginStatus() {
+
+            try {
+
+                const response = await fetch("/api/me", {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store"
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.authenticated) {
+
+                    showLoggedIn(result.user);
+
+                } else {
+
+                    showLoggedOut();
+
+                }
+
+            } catch (error) {
+
+                actionArea.innerHTML =
+                    "<p>Unable to check login status. Please refresh the page.</p>";
+
+            }
+        }
+
+        async function logout() {
+
+            const logoutButton =
+                document.getElementById("logoutButton");
+
+            logoutButton.disabled = true;
+            logoutButton.textContent = "LOGGING OUT...";
+
+            try {
+
+                const response = await fetch("/api/logout", {
+                    method: "POST",
+                    credentials: "same-origin"
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+
+                    throw new Error(
+                        result.message || "Logout failed."
+                    );
+
+                }
+
+                userInfo.textContent = "";
+
+                showMessage(
+                    "You have been logged out successfully.",
+                    true
+                );
+
+                showLoggedOut();
+
+            } catch (error) {
+
+                showMessage(
+                    error.message || "Unable to log out. Please try again."
+                );
+
+                logoutButton.disabled = false;
+                logoutButton.textContent = "LOGOUT";
+
+            }
+        }
+
+        checkLoginStatus();
+
+    </script>
+
 </body>
 </html>
