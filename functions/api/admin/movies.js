@@ -1,4 +1,3 @@
-
 import {
     requireSuperAdmin,
     jsonResponse
@@ -228,6 +227,89 @@ export async function onRequestPost({ request, env }) {
         return jsonResponse({
             success: false,
             message: "Unable to add movie."
+        }, 500);
+
+    }
+}
+
+export async function onRequestDelete({ request, env }) {
+
+    try {
+
+        const requestOrigin = request.headers.get("Origin");
+        const applicationOrigin = new URL(request.url).origin;
+
+        if (requestOrigin !== applicationOrigin) {
+            return jsonResponse({
+                success: false,
+                message: "Request origin could not be verified."
+            }, 403);
+        }
+
+        const auth = await requireSuperAdmin(request, env);
+
+        if (!auth.authorized) {
+            return auth.response;
+        }
+
+        const url = new URL(request.url);
+        const movieId = Number(url.searchParams.get("id"));
+
+        if (
+            !Number.isSafeInteger(movieId) ||
+            movieId < 1
+        ) {
+            return jsonResponse({
+                success: false,
+                message: "A valid movie ID is required."
+            }, 400);
+        }
+
+        const movie = await env.DB.prepare(`
+            SELECT id, title
+            FROM movies
+            WHERE id = ?
+            LIMIT 1
+        `).bind(movieId).first();
+
+        if (!movie) {
+            return jsonResponse({
+                success: false,
+                message: "Movie not found."
+            }, 404);
+        }
+
+        const linkedShow = await env.DB.prepare(`
+            SELECT id
+            FROM shows
+            WHERE movie_id = ?
+            LIMIT 1
+        `).bind(movieId).first();
+
+        if (linkedShow) {
+            return jsonResponse({
+                success: false,
+                message: "This movie is linked to an existing show and cannot be deleted. Change its status to INACTIVE instead."
+            }, 409);
+        }
+
+        await env.DB.prepare(`
+            DELETE FROM movies
+            WHERE id = ?
+        `).bind(movieId).run();
+
+        return jsonResponse({
+            success: true,
+            message: "Movie '" + movie.title + "' deleted successfully."
+        });
+
+    } catch (error) {
+
+        console.error("ADMIN DELETE MOVIE ERROR:", error);
+
+        return jsonResponse({
+            success: false,
+            message: "Unable to delete movie. It may be linked to other records."
         }, 500);
 
     }
