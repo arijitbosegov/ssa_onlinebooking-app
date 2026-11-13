@@ -143,7 +143,9 @@ footer {
             <option value="OFFICER">Officer</option>
             <option value="JCO">JCO</option>
             <option value="OR">OR</option>
-            <option value="DEPENDANT">Dependant</option>
+            <option value="EX_SERVICEMAN_OFFICER">Ex-Serviceman – Officer</option>
+            <option value="EX_SERVICEMAN_JCO">Ex-Serviceman – JCO</option>
+            <option value="EX_SERVICEMAN_OR">Ex-Serviceman – OR</option>
             <option value="GUEST">Guest</option>
         </select>
 
@@ -269,7 +271,10 @@ registerForm.addEventListener("submit", async function(event) {
         );
 
     } catch (error) {
-        showMessage(error.message || "Unable to register. Please try again.", "error");
+        showMessage(
+            error.message || "Unable to register. Please try again.",
+            "error"
+        );
     } finally {
         registerButton.disabled = false;
         registerButton.textContent = "REGISTER";
@@ -286,7 +291,10 @@ verifyButton.addEventListener("click", async function() {
     }
 
     if (!currentUserId) {
-        showMessage("Registration session unavailable. Please register again.", "error");
+        showMessage(
+            "Registration session unavailable. Please register again.",
+            "error"
+        );
         return;
     }
 
@@ -321,7 +329,10 @@ verifyButton.addEventListener("click", async function() {
         currentUserId = null;
 
     } catch (error) {
-        showMessage(error.message || "Verification failed. Please try again.", "error");
+        showMessage(
+            error.message || "Verification failed. Please try again.",
+            "error"
+        );
     } finally {
         verifyButton.disabled = false;
         verifyButton.textContent = "VERIFY EMAIL";
