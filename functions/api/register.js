@@ -115,23 +115,41 @@ export async function onRequestPost({ request, env }) {
         const password = String(data.password || "");
 
         const allowedCategories = [
-            "OFFICER", "JCO", "OR", "DEPENDANT", "GUEST"
+            "OFFICER",
+            "JCO",
+            "OR",
+            "EX_SERVICEMAN_OFFICER",
+            "EX_SERVICEMAN_JCO",
+            "EX_SERVICEMAN_OR",
+            "GUEST"
         ];
 
         if (!fullName || fullName.length > 100) {
-            return json({ success: false, message: "Enter a valid full name." }, 400);
+            return json({
+                success: false,
+                message: "Enter a valid full name."
+            }, 400);
         }
 
         if (!/^\+?[1-9]\d{9,14}$/.test(mobile)) {
-            return json({ success: false, message: "Enter a valid mobile number." }, 400);
+            return json({
+                success: false,
+                message: "Enter a valid mobile number."
+            }, 400);
         }
 
         if (!validEmail(email) || email.length > 254) {
-            return json({ success: false, message: "Enter a valid email address." }, 400);
+            return json({
+                success: false,
+                message: "Enter a valid email address."
+            }, 400);
         }
 
         if (!allowedCategories.includes(category)) {
-            return json({ success: false, message: "Invalid user category." }, 400);
+            return json({
+                success: false,
+                message: "Invalid user category."
+            }, 400);
         }
 
         if (password.length < 12 || password.length > 128) {
@@ -167,7 +185,11 @@ export async function onRequestPost({ request, env }) {
             )
             VALUES (?, ?, ?, ?, ?, 0, 0, 'ACTIVE')
         `).bind(
-            fullName, mobile, email, passwordHash, category
+            fullName,
+            mobile,
+            email,
+            passwordHash,
+            category
         ).run();
 
         userId = userResult.meta.last_row_id;
@@ -182,7 +204,11 @@ export async function onRequestPost({ request, env }) {
             crypto.getRandomValues(new Uint32Array(1))[0] % 1000000
         ).padStart(6, "0");
 
-        const otpHash = await hashOTP(userId, otp, env.OTP_HMAC_SECRET);
+        const otpHash = await hashOTP(
+            userId,
+            otp,
+            env.OTP_HMAC_SECRET
+        );
 
         const expiresAt = new Date(
             Date.now() + 5 * 60 * 1000
@@ -195,7 +221,11 @@ export async function onRequestPost({ request, env }) {
                 user_id, channel, otp_hash, expires_at
             )
             VALUES (?, 'EMAIL', ?, ?)
-        `).bind(userId, otpHash, expiresAt).run();
+        `).bind(
+            userId,
+            otpHash,
+            expiresAt
+        ).run();
 
         stage = "resend_email";
 
@@ -236,7 +266,9 @@ export async function onRequestPost({ request, env }) {
                 response: resendError
             });
 
-            throw new Error(`Resend rejected the request. HTTP ${emailResponse.status}`);
+            throw new Error(
+                `Resend rejected the request. HTTP ${emailResponse.status}`
+            );
         }
 
         console.log("Registration and OTP email request successful.");
@@ -265,7 +297,10 @@ export async function onRequestPost({ request, env }) {
                     ).bind(userId)
                 ]);
             } catch (cleanupError) {
-                console.error("REGISTRATION CLEANUP FAILURE:", cleanupError.message);
+                console.error(
+                    "REGISTRATION CLEANUP FAILURE:",
+                    cleanupError.message
+                );
             }
         }
 
