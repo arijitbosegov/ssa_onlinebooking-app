@@ -154,6 +154,17 @@
             color: #ffffff;
         }
 
+        .delete-button {
+            background: #8b1e2d;
+            color: #ffffff;
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        .delete-button:hover {
+            background: #b52a3d;
+        }
+
         .status-message {
             display: none;
             margin: 18px 0;
@@ -166,6 +177,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
             gap: 18px;
+            margin-top: 20px;
         }
 
         .movie-card {
@@ -242,11 +254,9 @@
                 grid-template-columns: 1fr;
             }
 
-            .logout-button {
-                width: 100%;
-            }
-
-            .primary-button {
+            .logout-button,
+            .primary-button,
+            .secondary-button {
                 width: 100%;
             }
         }
@@ -391,7 +401,6 @@
                 : "#57232b";
 
             statusMessage.style.color = "#ffffff";
-
         }
 
         function createTextElement(tag, className, text) {
@@ -428,7 +437,6 @@
 
                     window.location.replace("index.html");
                     return false;
-
                 }
 
                 document.getElementById("adminName").textContent =
@@ -445,9 +453,58 @@
                     "Unable to verify administrator access. Please try again.";
 
                 return false;
+            }
+        }
 
+        async function deleteMovie(movieId, movieTitle, button) {
+
+            const confirmed = window.confirm(
+                "Are you sure you want to delete '" +
+                movieTitle +
+                "'?\n\nThis action cannot be undone."
+            );
+
+            if (!confirmed) {
+                return;
             }
 
+            button.disabled = true;
+            button.textContent = "DELETING...";
+
+            statusMessage.style.display = "none";
+
+            try {
+
+                const response = await fetch(
+                    "/api/admin/movies?id=" + encodeURIComponent(movieId),
+                    {
+                        method: "DELETE",
+                        credentials: "same-origin",
+                        cache: "no-store"
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(
+                        result.message || "Unable to delete movie."
+                    );
+                }
+
+                showMessage(result.message, true);
+
+                await loadMovies();
+
+            } catch (error) {
+
+                showMessage(
+                    error.message || "Unable to delete movie."
+                );
+
+                button.disabled = false;
+                button.textContent = "DELETE MOVIE";
+            }
         }
 
         async function loadMovies() {
@@ -485,7 +542,6 @@
                     );
 
                     return;
-
                 }
 
                 movies.forEach(movie => {
@@ -501,7 +557,6 @@
                         poster.alt = movie.title + " poster";
                         poster.loading = "lazy";
                         poster.referrerPolicy = "no-referrer";
-
                         poster.src = movie.poster_url;
 
                         poster.onerror = function() {
@@ -509,7 +564,6 @@
                         };
 
                         card.appendChild(poster);
-
                     }
 
                     card.appendChild(
@@ -559,6 +613,18 @@
                         )
                     );
 
+                    const deleteButton = document.createElement("button");
+
+                    deleteButton.type = "button";
+                    deleteButton.className = "delete-button";
+                    deleteButton.textContent = "DELETE MOVIE";
+
+                    deleteButton.addEventListener("click", function() {
+                        deleteMovie(movie.id, movie.title, deleteButton);
+                    });
+
+                    card.appendChild(deleteButton);
+
                     movieList.appendChild(card);
 
                 });
@@ -568,9 +634,7 @@
                 movieCount.textContent = "Unable to load movie records.";
 
                 showMessage(error.message);
-
             }
-
         }
 
         document.getElementById("movieForm")
@@ -610,7 +674,6 @@
 
                     status:
                         document.getElementById("movieStatus").value
-
                 };
 
                 try {
@@ -626,7 +689,6 @@
                         },
 
                         body: JSON.stringify(movieData)
-
                     });
 
                     const result = await response.json();
@@ -636,7 +698,6 @@
                         throw new Error(
                             result.message || "Unable to add movie."
                         );
-
                     }
 
                     showMessage(
@@ -659,7 +720,6 @@
 
                     button.disabled = false;
                     button.textContent = "ADD MOVIE";
-
                 }
 
             });
@@ -696,7 +756,6 @@
 
                     button.disabled = false;
                     button.textContent = "LOGOUT";
-
                 }
 
             });
@@ -708,7 +767,6 @@
             if (authorised) {
                 await loadMovies();
             }
-
         }
 
         initialiseAdminPanel();
