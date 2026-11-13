@@ -1,0 +1,719 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Super Admin | SAPTA SHAKTI AUDITORIUM</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #101827;
+            color: #ffffff;
+        }
+
+        header {
+            background: #192d46;
+            padding: 25px 15px;
+            text-align: center;
+            border-bottom: 2px solid #d9b36c;
+        }
+
+        header h1 {
+            margin: 0;
+            color: #d9b36c;
+            font-size: 24px;
+            letter-spacing: 2px;
+        }
+
+        header p {
+            color: #d0d7e2;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            width: 94%;
+            max-width: 1050px;
+            margin: 30px auto;
+        }
+
+        .welcome-card,
+        .form-card,
+        .movie-card {
+            background: #1b304d;
+            border: 1px solid #354a63;
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 25px;
+        }
+
+        .welcome-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h2, h3 {
+            color: #e2b75e;
+        }
+
+        .welcome-card h2 {
+            margin: 0 0 8px;
+        }
+
+        .welcome-card p {
+            margin: 5px 0;
+            color: #d0d7e2;
+        }
+
+        .admin-badge {
+            display: inline-block;
+            background: #173f32;
+            color: #a7f0c5;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        label {
+            display: block;
+            margin: 17px 0 7px;
+            color: #f1f1f1;
+            font-size: 14px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #8291a5;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #172033;
+            font-size: 15px;
+            font-family: Arial, sans-serif;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: 2px solid #e2b75e;
+            border-color: #e2b75e;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 20px;
+        }
+
+        button {
+            border: none;
+            border-radius: 6px;
+            padding: 13px 23px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .primary-button {
+            background: #8b1e2d;
+            color: #ffffff;
+            margin-top: 23px;
+        }
+
+        .primary-button:hover {
+            background: #a92739;
+        }
+
+        .secondary-button {
+            background: #354a63;
+            color: #ffffff;
+        }
+
+        .logout-button {
+            background: #8b1e2d;
+            color: #ffffff;
+        }
+
+        .status-message {
+            display: none;
+            margin: 18px 0;
+            padding: 13px;
+            border-radius: 6px;
+            line-height: 1.5;
+        }
+
+        .movie-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 18px;
+        }
+
+        .movie-card {
+            margin: 0;
+            padding: 17px;
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 230px;
+            object-fit: contain;
+            background: #101827;
+            border-radius: 6px;
+        }
+
+        .movie-card h3 {
+            margin-bottom: 8px;
+        }
+
+        .movie-card p {
+            color: #d0d7e2;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .movie-status {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 4px;
+            background: #173f32;
+            color: #a7f0c5;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .empty-message {
+            color: #d0d7e2;
+            text-align: center;
+            padding: 25px 10px;
+        }
+
+        .loading {
+            color: #e2b75e;
+            text-align: center;
+            padding: 60px 15px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #192d46;
+            color: #aebdd0;
+            font-size: 12px;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 650px) {
+            header h1 {
+                font-size: 19px;
+            }
+
+            .container {
+                width: 94%;
+                margin: 18px auto;
+            }
+
+            .welcome-card,
+            .form-card {
+                padding: 18px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .logout-button {
+                width: 100%;
+            }
+
+            .primary-button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>SAPTA SHAKTI AUDITORIUM</h1>
+        <p>SUPER ADMINISTRATION PANEL</p>
+    </header>
+
+    <main class="container" id="loadingArea">
+        <div class="loading">Verifying administrator access...</div>
+    </main>
+
+    <main class="container" id="adminArea" style="display:none;">
+
+        <section class="welcome-card">
+
+            <div>
+                <h2 id="adminName">Welcome, Administrator</h2>
+                <p>Manage auditorium movie listings.</p>
+                <span class="admin-badge">SUPER ADMIN</span>
+            </div>
+
+            <button type="button" class="logout-button" id="logoutButton">
+                LOGOUT
+            </button>
+
+        </section>
+
+        <div id="statusMessage" class="status-message"
+             role="status" aria-live="polite"></div>
+
+        <section class="form-card">
+
+            <h2>ADD NEW MOVIE</h2>
+
+            <form id="movieForm">
+
+                <label for="title">Movie Title *</label>
+                <input type="text" id="title" maxlength="150"
+                       placeholder="Enter movie title" required>
+
+                <label for="description">Movie Description</label>
+                <textarea id="description" maxlength="3000"
+                          placeholder="Enter movie description"></textarea>
+
+                <div class="form-grid">
+
+                    <div>
+                        <label for="language">Language *</label>
+                        <input type="text" id="language" maxlength="50"
+                               placeholder="e.g. Hindi, English" required>
+                    </div>
+
+                    <div>
+                        <label for="duration">Duration (minutes) *</label>
+                        <input type="number" id="duration" min="1" max="500"
+                               placeholder="e.g. 150" required>
+                    </div>
+
+                    <div>
+                        <label for="certification">Certification *</label>
+                        <select id="certification" required>
+                            <option value="">Select certification</option>
+                            <option value="U">U</option>
+                            <option value="UA 7+">UA 7+</option>
+                            <option value="UA 13+">UA 13+</option>
+                            <option value="UA 16+">UA 16+</option>
+                            <option value="A">A</option>
+                            <option value="S">S</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="releaseDate">Release Date</label>
+                        <input type="date" id="releaseDate">
+                    </div>
+
+                </div>
+
+                <label for="posterUrl">Movie Poster URL (HTTPS)</label>
+                <input type="url" id="posterUrl"
+                       placeholder="https://example.com/poster.jpg">
+
+                <label for="movieStatus">Movie Status *</label>
+                <select id="movieStatus" required>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                </select>
+
+                <button type="submit" class="primary-button"
+                        id="addMovieButton">
+                    ADD MOVIE
+                </button>
+
+            </form>
+
+        </section>
+
+        <section>
+
+            <h2>MOVIE LIBRARY</h2>
+
+            <button type="button" class="secondary-button"
+                    id="refreshButton">
+                REFRESH MOVIES
+            </button>
+
+            <p id="movieCount">Loading movie records...</p>
+
+            <div id="movieList" class="movie-list"></div>
+
+        </section>
+
+    </main>
+
+    <footer>
+        SAPTA SHAKTI AUDITORIUM
+        <br>
+        SUPER ADMINISTRATION PANEL
+    </footer>
+
+    <script>
+
+        const loadingArea = document.getElementById("loadingArea");
+        const adminArea = document.getElementById("adminArea");
+        const statusMessage = document.getElementById("statusMessage");
+        const movieList = document.getElementById("movieList");
+        const movieCount = document.getElementById("movieCount");
+
+        function showMessage(message, success = false) {
+
+            statusMessage.style.display = "block";
+            statusMessage.textContent = message;
+
+            statusMessage.style.background = success
+                ? "#173f32"
+                : "#57232b";
+
+            statusMessage.style.color = "#ffffff";
+
+        }
+
+        function createTextElement(tag, className, text) {
+
+            const element = document.createElement(tag);
+
+            if (className) {
+                element.className = className;
+            }
+
+            element.textContent = text || "";
+
+            return element;
+        }
+
+        async function checkAdminAccess() {
+
+            try {
+
+                const response = await fetch("/api/me", {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store"
+                });
+
+                const result = await response.json();
+
+                if (
+                    !response.ok ||
+                    !result.authenticated ||
+                    !result.user ||
+                    result.user.role !== "SUPER_ADMIN"
+                ) {
+
+                    window.location.replace("index.html");
+                    return false;
+
+                }
+
+                document.getElementById("adminName").textContent =
+                    "Welcome, " + result.user.fullName;
+
+                loadingArea.style.display = "none";
+                adminArea.style.display = "block";
+
+                return true;
+
+            } catch (error) {
+
+                loadingArea.textContent =
+                    "Unable to verify administrator access. Please try again.";
+
+                return false;
+
+            }
+
+        }
+
+        async function loadMovies() {
+
+            movieCount.textContent = "Loading movies...";
+            movieList.replaceChildren();
+
+            try {
+
+                const response = await fetch("/api/admin/movies", {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store"
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to load movies.");
+                }
+
+                const movies = result.movies || [];
+
+                movieCount.textContent =
+                    "Total movies: " + movies.length;
+
+                if (movies.length === 0) {
+
+                    movieList.appendChild(
+                        createTextElement(
+                            "p",
+                            "empty-message",
+                            "No movies have been added yet."
+                        )
+                    );
+
+                    return;
+
+                }
+
+                movies.forEach(movie => {
+
+                    const card = document.createElement("article");
+                    card.className = "movie-card";
+
+                    if (movie.poster_url) {
+
+                        const poster = document.createElement("img");
+
+                        poster.className = "movie-poster";
+                        poster.alt = movie.title + " poster";
+                        poster.loading = "lazy";
+                        poster.referrerPolicy = "no-referrer";
+
+                        poster.src = movie.poster_url;
+
+                        poster.onerror = function() {
+                            poster.style.display = "none";
+                        };
+
+                        card.appendChild(poster);
+
+                    }
+
+                    card.appendChild(
+                        createTextElement("h3", "", movie.title)
+                    );
+
+                    card.appendChild(
+                        createTextElement(
+                            "p",
+                            "",
+                            movie.language + " | " +
+                            movie.duration_minutes + " minutes"
+                        )
+                    );
+
+                    card.appendChild(
+                        createTextElement(
+                            "p",
+                            "",
+                            "Certification: " + movie.certification
+                        )
+                    );
+
+                    card.appendChild(
+                        createTextElement(
+                            "p",
+                            "",
+                            movie.release_date
+                                ? "Release date: " + movie.release_date
+                                : "Release date: Not specified"
+                        )
+                    );
+
+                    card.appendChild(
+                        createTextElement(
+                            "span",
+                            "movie-status",
+                            movie.status
+                        )
+                    );
+
+                    card.appendChild(
+                        createTextElement(
+                            "p",
+                            "",
+                            movie.description || "No description provided."
+                        )
+                    );
+
+                    movieList.appendChild(card);
+
+                });
+
+            } catch (error) {
+
+                movieCount.textContent = "Unable to load movie records.";
+
+                showMessage(error.message);
+
+            }
+
+        }
+
+        document.getElementById("movieForm")
+            .addEventListener("submit", async function(event) {
+
+                event.preventDefault();
+
+                const button =
+                    document.getElementById("addMovieButton");
+
+                button.disabled = true;
+                button.textContent = "ADDING MOVIE...";
+
+                statusMessage.style.display = "none";
+
+                const movieData = {
+
+                    title: document.getElementById("title").value.trim(),
+
+                    description:
+                        document.getElementById("description").value.trim(),
+
+                    language:
+                        document.getElementById("language").value.trim(),
+
+                    duration_minutes:
+                        Number(document.getElementById("duration").value),
+
+                    certification:
+                        document.getElementById("certification").value,
+
+                    poster_url:
+                        document.getElementById("posterUrl").value.trim(),
+
+                    release_date:
+                        document.getElementById("releaseDate").value || null,
+
+                    status:
+                        document.getElementById("movieStatus").value
+
+                };
+
+                try {
+
+                    const response = await fetch("/api/admin/movies", {
+
+                        method: "POST",
+
+                        credentials: "same-origin",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify(movieData)
+
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok || !result.success) {
+
+                        throw new Error(
+                            result.message || "Unable to add movie."
+                        );
+
+                    }
+
+                    showMessage(
+                        "Movie added successfully. Movie ID: " +
+                        result.movieId,
+                        true
+                    );
+
+                    document.getElementById("movieForm").reset();
+
+                    await loadMovies();
+
+                } catch (error) {
+
+                    showMessage(
+                        error.message || "Unable to add movie."
+                    );
+
+                } finally {
+
+                    button.disabled = false;
+                    button.textContent = "ADD MOVIE";
+
+                }
+
+            });
+
+        document.getElementById("refreshButton")
+            .addEventListener("click", loadMovies);
+
+        document.getElementById("logoutButton")
+            .addEventListener("click", async function() {
+
+                const button = this;
+
+                button.disabled = true;
+                button.textContent = "LOGGING OUT...";
+
+                try {
+
+                    const response = await fetch("/api/logout", {
+                        method: "POST",
+                        credentials: "same-origin"
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok || !result.success) {
+                        throw new Error("Logout failed.");
+                    }
+
+                    window.location.replace("index.html");
+
+                } catch (error) {
+
+                    showMessage(error.message || "Unable to log out.");
+
+                    button.disabled = false;
+                    button.textContent = "LOGOUT";
+
+                }
+
+            });
+
+        async function initialiseAdminPanel() {
+
+            const authorised = await checkAdminAccess();
+
+            if (authorised) {
+                await loadMovies();
+            }
+
+        }
+
+        initialiseAdminPanel();
+
+    </script>
+
+</body>
+</html>
