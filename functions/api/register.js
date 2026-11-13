@@ -111,18 +111,41 @@ export async function onRequestPost({ request, env }) {
         const fullName = String(data.fullName || "").trim();
         const mobile = normaliseMobile(data.mobile);
         const email = String(data.email || "").trim().toLowerCase();
-        const category = String(data.category || "").toUpperCase();
+        const selectedCategory = String(data.category || "").toUpperCase();
         const password = String(data.password || "");
 
-        const allowedCategories = [
-            "OFFICER",
-            "JCO",
-            "OR",
-            "EX_SERVICEMAN_OFFICER",
-            "EX_SERVICEMAN_JCO",
-            "EX_SERVICEMAN_OR",
-            "GUEST"
-        ];
+        const categoryMapping = {
+            OFFICER: {
+                category: "OFFICER",
+                serviceCategory: "SERVING"
+            },
+            JCO: {
+                category: "JCO",
+                serviceCategory: "SERVING"
+            },
+            OR: {
+                category: "OR",
+                serviceCategory: "SERVING"
+            },
+            EX_SERVICEMAN_OFFICER: {
+                category: "OFFICER",
+                serviceCategory: "EX_SERVICEMAN"
+            },
+            EX_SERVICEMAN_JCO: {
+                category: "JCO",
+                serviceCategory: "EX_SERVICEMAN"
+            },
+            EX_SERVICEMAN_OR: {
+                category: "OR",
+                serviceCategory: "EX_SERVICEMAN"
+            },
+            GUEST: {
+                category: "GUEST",
+                serviceCategory: null
+            }
+        };
+
+        const selectedMapping = categoryMapping[selectedCategory];
 
         if (!fullName || fullName.length > 100) {
             return json({
@@ -145,7 +168,7 @@ export async function onRequestPost({ request, env }) {
             }, 400);
         }
 
-        if (!allowedCategories.includes(category)) {
+        if (!selectedMapping) {
             return json({
                 success: false,
                 message: "Invalid user category."
@@ -180,16 +203,24 @@ export async function onRequestPost({ request, env }) {
 
         const userResult = await env.DB.prepare(`
             INSERT INTO users (
-                full_name, mobile, email, password_hash, category,
-                mobile_verified, email_verified, status
+                full_name,
+                mobile,
+                email,
+                password_hash,
+                category,
+                service_category,
+                mobile_verified,
+                email_verified,
+                status
             )
-            VALUES (?, ?, ?, ?, ?, 0, 0, 'ACTIVE')
+            VALUES (?, ?, ?, ?, ?, ?, 0, 0, 'ACTIVE')
         `).bind(
             fullName,
             mobile,
             email,
             passwordHash,
-            category
+            selectedMapping.category,
+            selectedMapping.serviceCategory
         ).run();
 
         userId = userResult.meta.last_row_id;
