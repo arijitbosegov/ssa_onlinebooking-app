@@ -1,0 +1,421 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>User Dashboard | SAPTA SHAKTI AUDITORIUM</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #101827;
+            color: #ffffff;
+        }
+
+        header {
+            background: #192d46;
+            padding: 22px 20px;
+            text-align: center;
+            border-bottom: 2px solid #d9b36c;
+        }
+
+        header h1 {
+            margin: 0;
+            color: #d9b36c;
+            font-size: 25px;
+            letter-spacing: 2px;
+        }
+
+        header p {
+            margin: 8px 0 0;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1050px;
+            margin: 30px auto;
+        }
+
+        .welcome-card {
+            background: #1b304d;
+            border: 1px solid #354a63;
+            border-radius: 10px;
+            padding: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .welcome-card h2 {
+            margin: 0 0 10px;
+            color: #e2b75e;
+            font-size: 23px;
+        }
+
+        .welcome-card p {
+            margin: 5px 0;
+            color: #d0d7e2;
+        }
+
+        .logout-button {
+            background: #8b1e2d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 25px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .logout-button:hover {
+            background: #a92739;
+        }
+
+        .logout-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .section-title {
+            color: #e2b75e;
+            margin: 35px 0 18px;
+            font-size: 21px;
+        }
+
+        .account-card {
+            background: #1b304d;
+            border: 1px solid #354a63;
+            border-radius: 10px;
+            padding: 22px;
+        }
+
+        .account-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 13px 0;
+            border-bottom: 1px solid #354a63;
+        }
+
+        .account-row:last-child {
+            border-bottom: none;
+        }
+
+        .account-label {
+            color: #aebdd0;
+        }
+
+        .account-value {
+            color: #ffffff;
+            font-weight: bold;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+
+        .booking-card {
+            background: #1b304d;
+            border: 1px solid #354a63;
+            border-radius: 10px;
+            padding: 35px 20px;
+            text-align: center;
+        }
+
+        .booking-card h3 {
+            color: #e2b75e;
+            margin-top: 0;
+        }
+
+        .booking-card p {
+            color: #d0d7e2;
+            line-height: 1.6;
+        }
+
+        .status-message {
+            display: none;
+            padding: 13px;
+            border-radius: 6px;
+            margin: 20px 0;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #e2b75e;
+        }
+
+        footer {
+            margin-top: 50px;
+            padding: 20px;
+            background: #192d46;
+            text-align: center;
+            color: #aebdd0;
+            font-size: 12px;
+        }
+
+        @media (max-width: 600px) {
+
+            header h1 {
+                font-size: 20px;
+            }
+
+            .container {
+                width: 94%;
+                margin: 20px auto;
+            }
+
+            .welcome-card {
+                padding: 20px;
+            }
+
+            .welcome-card h2 {
+                font-size: 20px;
+            }
+
+            .logout-button {
+                width: 100%;
+            }
+
+            .account-row {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .account-value {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>SAPTA SHAKTI AUDITORIUM</h1>
+        <p>USER DASHBOARD</p>
+    </header>
+
+    <div class="container">
+
+        <div id="loadingMessage" class="loading">
+            Verifying your account...
+        </div>
+
+        <div id="dashboardContent" style="display:none;">
+
+            <section class="welcome-card">
+
+                <div>
+                    <h2 id="welcomeName">Welcome!</h2>
+
+                    <p>
+                        Welcome to SAPTA SHAKTI AUDITORIUM.
+                    </p>
+
+                    <p>
+                        Your online movie booking account.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="logout-button"
+                    id="logoutButton"
+                >
+                    LOGOUT
+                </button>
+
+            </section>
+
+            <h2 class="section-title">MY ACCOUNT</h2>
+
+            <section class="account-card">
+
+                <div class="account-row">
+                    <span class="account-label">Full Name</span>
+                    <span class="account-value" id="fullName">-</span>
+                </div>
+
+                <div class="account-row">
+                    <span class="account-label">Email Address</span>
+                    <span class="account-value" id="email">-</span>
+                </div>
+
+                <div class="account-row">
+                    <span class="account-label">Category</span>
+                    <span class="account-value" id="category">-</span>
+                </div>
+
+                <div class="account-row">
+                    <span class="account-label">Account Type</span>
+                    <span class="account-value" id="role">-</span>
+                </div>
+
+            </section>
+
+            <h2 class="section-title">MOVIE BOOKINGS</h2>
+
+            <section class="booking-card">
+
+                <h3>Book Your Movie Tickets</h3>
+
+                <p>
+                    Movie listings, show timings, seat selection
+                    and online ticket booking will be available here.
+                </p>
+
+                <p>
+                    <strong>COMING SOON</strong>
+                </p>
+
+            </section>
+
+            <div
+                id="statusMessage"
+                class="status-message"
+                role="status"
+                aria-live="polite"
+            ></div>
+
+        </div>
+
+    </div>
+
+    <footer>
+        SAPTA SHAKTI AUDITORIUM
+        <br>
+        ONLINE MOVIE TICKET BOOKING
+    </footer>
+
+    <script>
+
+        const loadingMessage =
+            document.getElementById("loadingMessage");
+
+        const dashboardContent =
+            document.getElementById("dashboardContent");
+
+        const statusMessage =
+            document.getElementById("statusMessage");
+
+        function showStatus(message, success = false) {
+
+            statusMessage.style.display = "block";
+            statusMessage.textContent = message;
+
+            statusMessage.style.background = success
+                ? "#173f32"
+                : "#57232b";
+
+            statusMessage.style.color = "#ffffff";
+        }
+
+        async function loadDashboard() {
+
+            try {
+
+                const response = await fetch("/api/me", {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store"
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.authenticated) {
+
+                    window.location.replace("login.html");
+                    return;
+
+                }
+
+                const user = result.user;
+
+                document.getElementById("welcomeName").textContent =
+                    "Welcome, " + user.fullName + "!";
+
+                document.getElementById("fullName").textContent =
+                    user.fullName || "-";
+
+                document.getElementById("email").textContent =
+                    user.email || "-";
+
+                document.getElementById("category").textContent =
+                    user.category || "-";
+
+                document.getElementById("role").textContent =
+                    user.role || "USER";
+
+                loadingMessage.style.display = "none";
+                dashboardContent.style.display = "block";
+
+            } catch (error) {
+
+                loadingMessage.textContent =
+                    "Unable to verify your account. Please refresh the page.";
+
+            }
+        }
+
+        async function logout() {
+
+            const logoutButton =
+                document.getElementById("logoutButton");
+
+            logoutButton.disabled = true;
+            logoutButton.textContent = "LOGGING OUT...";
+
+            try {
+
+                const response = await fetch("/api/logout", {
+                    method: "POST",
+                    credentials: "same-origin"
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+
+                    throw new Error(
+                        result.message || "Logout failed."
+                    );
+
+                }
+
+                window.location.replace("index.html");
+
+            } catch (error) {
+
+                showStatus(
+                    error.message || "Unable to log out. Please try again."
+                );
+
+                logoutButton.disabled = false;
+                logoutButton.textContent = "LOGOUT";
+
+            }
+        }
+
+        document
+            .getElementById("logoutButton")
+            .addEventListener("click", logout);
+
+        loadDashboard();
+
+    </script>
+
+</body>
+</html>
