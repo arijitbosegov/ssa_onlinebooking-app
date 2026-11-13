@@ -50,6 +50,7 @@ export async function onRequestGet({ request, env }) {
                 u.full_name,
                 u.email,
                 u.category,
+                u.service_category,
                 u.role,
                 u.status,
                 u.email_verified
@@ -94,6 +95,7 @@ export async function onRequestGet({ request, env }) {
                 fullName: session.full_name,
                 email: session.email,
                 category: session.category,
+                serviceCategory: session.service_category || null,
                 role: role,
 
                 permissions: {
