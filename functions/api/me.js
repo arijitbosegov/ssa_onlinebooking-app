@@ -13,12 +13,17 @@ async function sha256(value) {
 function json(data, status = 200) {
     return Response.json(data, {
         status,
-        headers: { "Cache-Control": "no-store" }
+        headers: {
+            "Cache-Control": "no-store",
+            "Pragma": "no-cache"
+        }
     });
 }
 
 export async function onRequestGet({ request, env }) {
+
     try {
+
         const cookie = request.headers.get("Cookie") || "";
 
         const match = cookie.match(
@@ -26,11 +31,13 @@ export async function onRequestGet({ request, env }) {
         );
 
         if (!match) {
+
             return json({
                 success: false,
                 authenticated: false,
                 message: "Please log in."
             }, 401);
+
         }
 
         const tokenHash = await sha256(match[1]);
@@ -58,30 +65,56 @@ export async function onRequestGet({ request, env }) {
             session.status !== "ACTIVE" ||
             session.email_verified !== 1
         ) {
+
             return json({
                 success: false,
                 authenticated: false,
                 message: "Session expired. Please log in again."
             }, 401);
+
         }
 
+        const role = session.role || "USER";
+
+        const isSuperAdmin = role === "SUPER_ADMIN";
+
+        const isAdmin = [
+            "SUPER_ADMIN",
+            "ADMIN"
+        ].includes(role);
+
         return json({
+
             success: true,
+
             authenticated: true,
+
             user: {
                 id: session.id,
                 fullName: session.full_name,
                 email: session.email,
                 category: session.category,
-                role: session.role
+                role: role,
+
+                permissions: {
+                    isAdmin: isAdmin,
+                    isSuperAdmin: isSuperAdmin
+                }
             },
+
             expiresAt: session.expires_at
+
         });
 
     } catch (error) {
+
+        console.error("SESSION VALIDATION ERROR:", error);
+
         return json({
             success: false,
+            authenticated: false,
             message: "Unable to validate session."
         }, 500);
+
     }
 }
