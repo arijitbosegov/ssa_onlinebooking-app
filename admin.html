@@ -154,15 +154,34 @@
             color: #ffffff;
         }
 
-        .delete-button {
-            background: #8b1e2d;
-            color: #ffffff;
+        .edit-button {
+            background: #d9b36c;
+            color: #172033;
             width: 100%;
             margin-top: 12px;
         }
 
+        .edit-button:hover {
+            background: #e9c982;
+        }
+
+        .delete-button {
+            background: #8b1e2d;
+            color: #ffffff;
+            width: 100%;
+            margin-top: 10px;
+        }
+
         .delete-button:hover {
             background: #b52a3d;
+        }
+
+        .cancel-button {
+            display: none;
+            background: #354a63;
+            color: #ffffff;
+            margin-top: 23px;
+            margin-left: 8px;
         }
 
         .status-message {
@@ -226,6 +245,13 @@
             padding: 60px 15px;
         }
 
+        .editing-notice {
+            display: none;
+            color: #e2b75e;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
         footer {
             text-align: center;
             padding: 20px;
@@ -256,8 +282,13 @@
 
             .logout-button,
             .primary-button,
-            .secondary-button {
+            .secondary-button,
+            .cancel-button {
                 width: 100%;
+            }
+
+            .cancel-button {
+                margin-left: 0;
             }
         }
     </style>
@@ -293,9 +324,13 @@
         <div id="statusMessage" class="status-message"
              role="status" aria-live="polite"></div>
 
-        <section class="form-card">
+        <section class="form-card" id="movieFormSection">
 
-            <h2>ADD NEW MOVIE</h2>
+            <h2 id="formHeading">ADD NEW MOVIE</h2>
+
+            <p id="editingNotice" class="editing-notice">
+                You are editing an existing movie.
+            </p>
 
             <form id="movieForm">
 
@@ -352,8 +387,13 @@
                 </select>
 
                 <button type="submit" class="primary-button"
-                        id="addMovieButton">
+                        id="submitMovieButton">
                     ADD MOVIE
+                </button>
+
+                <button type="button" class="cancel-button"
+                        id="cancelEditButton">
+                    CANCEL EDIT
                 </button>
 
             </form>
@@ -390,6 +430,18 @@
         const statusMessage = document.getElementById("statusMessage");
         const movieList = document.getElementById("movieList");
         const movieCount = document.getElementById("movieCount");
+
+        const movieForm = document.getElementById("movieForm");
+        const formHeading = document.getElementById("formHeading");
+        const submitMovieButton =
+            document.getElementById("submitMovieButton");
+        const cancelEditButton =
+            document.getElementById("cancelEditButton");
+        const editingNotice =
+            document.getElementById("editingNotice");
+
+        let editingMovieId = null;
+        let moviesCache = [];
 
         function showMessage(message, success = false) {
 
@@ -456,6 +508,59 @@
             }
         }
 
+        function startEditing(movie) {
+
+            editingMovieId = movie.id;
+
+            document.getElementById("title").value =
+                movie.title || "";
+
+            document.getElementById("description").value =
+                movie.description || "";
+
+            document.getElementById("language").value =
+                movie.language || "";
+
+            document.getElementById("duration").value =
+                movie.duration_minutes || "";
+
+            document.getElementById("certification").value =
+                movie.certification || "";
+
+            document.getElementById("releaseDate").value =
+                movie.release_date || "";
+
+            document.getElementById("posterUrl").value =
+                movie.poster_url || "";
+
+            document.getElementById("movieStatus").value =
+                movie.status || "ACTIVE";
+
+            formHeading.textContent = "EDIT MOVIE";
+            submitMovieButton.textContent = "UPDATE MOVIE";
+            cancelEditButton.style.display = "inline-block";
+            editingNotice.style.display = "block";
+
+            statusMessage.style.display = "none";
+
+            document.getElementById("movieFormSection").scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
+
+        function cancelEditing() {
+
+            editingMovieId = null;
+
+            movieForm.reset();
+
+            formHeading.textContent = "ADD NEW MOVIE";
+            submitMovieButton.textContent = "ADD MOVIE";
+            cancelEditButton.style.display = "none";
+            editingNotice.style.display = "none";
+        }
+
         async function deleteMovie(movieId, movieTitle, button) {
 
             const confirmed = window.confirm(
@@ -490,6 +595,10 @@
                     throw new Error(
                         result.message || "Unable to delete movie."
                     );
+                }
+
+                if (editingMovieId === movieId) {
+                    cancelEditing();
                 }
 
                 showMessage(result.message, true);
@@ -527,6 +636,7 @@
                 }
 
                 const movies = result.movies || [];
+                moviesCache = movies;
 
                 movieCount.textContent =
                     "Total movies: " + movies.length;
@@ -613,6 +723,18 @@
                         )
                     );
 
+                    const editButton = document.createElement("button");
+
+                    editButton.type = "button";
+                    editButton.className = "edit-button";
+                    editButton.textContent = "EDIT MOVIE";
+
+                    editButton.addEventListener("click", function() {
+                        startEditing(movie);
+                    });
+
+                    card.appendChild(editButton);
+
                     const deleteButton = document.createElement("button");
 
                     deleteButton.type = "button";
@@ -637,92 +759,113 @@
             }
         }
 
-        document.getElementById("movieForm")
-            .addEventListener("submit", async function(event) {
+        movieForm.addEventListener("submit", async function(event) {
 
-                event.preventDefault();
+            event.preventDefault();
 
-                const button =
-                    document.getElementById("addMovieButton");
+            const isEditing = editingMovieId !== null;
 
-                button.disabled = true;
-                button.textContent = "ADDING MOVIE...";
+            submitMovieButton.disabled = true;
+            submitMovieButton.textContent = isEditing
+                ? "UPDATING MOVIE..."
+                : "ADDING MOVIE...";
 
-                statusMessage.style.display = "none";
+            cancelEditButton.disabled = true;
+            statusMessage.style.display = "none";
 
-                const movieData = {
+            const movieData = {
 
-                    title: document.getElementById("title").value.trim(),
+                title: document.getElementById("title").value.trim(),
 
-                    description:
-                        document.getElementById("description").value.trim(),
+                description:
+                    document.getElementById("description").value.trim(),
 
-                    language:
-                        document.getElementById("language").value.trim(),
+                language:
+                    document.getElementById("language").value.trim(),
 
-                    duration_minutes:
-                        Number(document.getElementById("duration").value),
+                duration_minutes:
+                    Number(document.getElementById("duration").value),
 
-                    certification:
-                        document.getElementById("certification").value,
+                certification:
+                    document.getElementById("certification").value,
 
-                    poster_url:
-                        document.getElementById("posterUrl").value.trim(),
+                poster_url:
+                    document.getElementById("posterUrl").value.trim(),
 
-                    release_date:
-                        document.getElementById("releaseDate").value || null,
+                release_date:
+                    document.getElementById("releaseDate").value || null,
 
-                    status:
-                        document.getElementById("movieStatus").value
-                };
+                status:
+                    document.getElementById("movieStatus").value
+            };
 
-                try {
+            try {
 
-                    const response = await fetch("/api/admin/movies", {
+                const url = isEditing
+                    ? "/api/admin/movies?id=" +
+                      encodeURIComponent(editingMovieId)
+                    : "/api/admin/movies";
 
-                        method: "POST",
+                const response = await fetch(url, {
 
-                        credentials: "same-origin",
+                    method: isEditing ? "PUT" : "POST",
 
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
+                    credentials: "same-origin",
 
-                        body: JSON.stringify(movieData)
-                    });
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
 
-                    const result = await response.json();
+                    body: JSON.stringify(movieData)
+                });
 
-                    if (!response.ok || !result.success) {
+                const result = await response.json();
 
-                        throw new Error(
-                            result.message || "Unable to add movie."
-                        );
-                    }
+                if (!response.ok || !result.success) {
 
-                    showMessage(
-                        "Movie added successfully. Movie ID: " +
-                        result.movieId,
-                        true
+                    throw new Error(
+                        result.message ||
+                        (isEditing
+                            ? "Unable to update movie."
+                            : "Unable to add movie.")
                     );
-
-                    document.getElementById("movieForm").reset();
-
-                    await loadMovies();
-
-                } catch (error) {
-
-                    showMessage(
-                        error.message || "Unable to add movie."
-                    );
-
-                } finally {
-
-                    button.disabled = false;
-                    button.textContent = "ADD MOVIE";
                 }
 
-            });
+                showMessage(
+                    result.message +
+                    (isEditing
+                        ? " Movie ID: " + result.movieId
+                        : " Movie ID: " + result.movieId),
+                    true
+                );
+
+                cancelEditing();
+
+                await loadMovies();
+
+            } catch (error) {
+
+                showMessage(
+                    error.message || "Unable to save movie."
+                );
+
+            } finally {
+
+                submitMovieButton.disabled = false;
+                submitMovieButton.textContent =
+                    editingMovieId !== null
+                        ? "UPDATE MOVIE"
+                        : "ADD MOVIE";
+
+                cancelEditButton.disabled = false;
+            }
+        });
+
+        cancelEditButton.addEventListener("click", function() {
+
+            cancelEditing();
+            statusMessage.style.display = "none";
+        });
 
         document.getElementById("refreshButton")
             .addEventListener("click", loadMovies);
@@ -757,7 +900,6 @@
                     button.disabled = false;
                     button.textContent = "LOGOUT";
                 }
-
             });
 
         async function initialiseAdminPanel() {
