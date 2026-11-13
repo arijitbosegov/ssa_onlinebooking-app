@@ -1,3 +1,4 @@
+
 import {
     requireSuperAdmin,
     jsonResponse
@@ -62,7 +63,6 @@ function validateMovie(data) {
             if (parsedUrl.protocol !== "https:") {
                 return "Poster URL must use HTTPS.";
             }
-
         } catch {
             return "Please enter a valid poster URL.";
         }
@@ -96,6 +96,50 @@ function validateMovie(data) {
     }
 
     return null;
+}
+
+function verifySameOrigin(request) {
+
+    const requestOrigin = request.headers.get("Origin");
+    const applicationOrigin = new URL(request.url).origin;
+
+    return requestOrigin === applicationOrigin;
+}
+
+function verifyJsonContentType(request) {
+
+    const contentType = request.headers.get("Content-Type") || "";
+
+    return contentType.toLowerCase().startsWith("application/json");
+}
+
+function getMovieId(request) {
+
+    const url = new URL(request.url);
+    const movieId = Number(url.searchParams.get("id"));
+
+    if (
+        !Number.isSafeInteger(movieId) ||
+        movieId < 1
+    ) {
+        return null;
+    }
+
+    return movieId;
+}
+
+function getMovieValues(data) {
+
+    return {
+        title: data.title.trim(),
+        description: (data.description || "").trim(),
+        language: data.language.trim(),
+        duration: Number(data.duration_minutes),
+        certification: data.certification.trim().toUpperCase(),
+        posterUrl: (data.poster_url || "").trim() || null,
+        releaseDate: data.release_date || null,
+        status: data.status || "ACTIVE"
+    };
 }
 
 export async function onRequestGet({ request, env }) {
@@ -138,7 +182,6 @@ export async function onRequestGet({ request, env }) {
             success: false,
             message: "Unable to retrieve movies."
         }, 500);
-
     }
 }
 
@@ -146,19 +189,14 @@ export async function onRequestPost({ request, env }) {
 
     try {
 
-        const requestOrigin = request.headers.get("Origin");
-        const applicationOrigin = new URL(request.url).origin;
-
-        if (requestOrigin !== applicationOrigin) {
+        if (!verifySameOrigin(request)) {
             return jsonResponse({
                 success: false,
                 message: "Request origin could not be verified."
             }, 403);
         }
 
-        const contentType = request.headers.get("Content-Type") || "";
-
-        if (!contentType.toLowerCase().startsWith("application/json")) {
+        if (!verifyJsonContentType(request)) {
             return jsonResponse({
                 success: false,
                 message: "Content-Type must be application/json."
@@ -182,14 +220,7 @@ export async function onRequestPost({ request, env }) {
             }, 400);
         }
 
-        const title = data.title.trim();
-        const description = (data.description || "").trim();
-        const language = data.language.trim();
-        const duration = Number(data.duration_minutes);
-        const certification = data.certification.trim().toUpperCase();
-        const posterUrl = (data.poster_url || "").trim() || null;
-        const releaseDate = data.release_date || null;
-        const status = data.status || "ACTIVE";
+        const movie = getMovieValues(data);
 
         const result = await env.DB.prepare(`
             INSERT INTO movies (
@@ -204,14 +235,14 @@ export async function onRequestPost({ request, env }) {
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
-            title,
-            description,
-            language,
-            duration,
-            certification,
-            posterUrl,
-            releaseDate,
-            status
+            movie.title,
+            movie.description,
+            movie.language,
+            movie.duration,
+            movie.certification,
+            movie.posterUrl,
+            movie.releaseDate,
+            movie.status
         ).run();
 
         return jsonResponse({
@@ -228,7 +259,107 @@ export async function onRequestPost({ request, env }) {
             success: false,
             message: "Unable to add movie."
         }, 500);
+    }
+}
 
+export async function onRequestPut({ request, env }) {
+
+    try {
+
+        if (!verifySameOrigin(request)) {
+            return jsonResponse({
+                success: false,
+                message: "Request origin could not be verified."
+            }, 403);
+        }
+
+        if (!verifyJsonContentType(request)) {
+            return jsonResponse({
+                success: false,
+                message: "Content-Type must be application/json."
+            }, 415);
+        }
+
+        const auth = await requireSuperAdmin(request, env);
+
+        if (!auth.authorized) {
+            return auth.response;
+        }
+
+        const movieId = getMovieId(request);
+
+        if (!movieId) {
+            return jsonResponse({
+                success: false,
+                message: "A valid movie ID is required."
+            }, 400);
+        }
+
+        const existingMovie = await env.DB.prepare(`
+            SELECT id
+            FROM movies
+            WHERE id = ?
+            LIMIT 1
+        `).bind(movieId).first();
+
+        if (!existingMovie) {
+            return jsonResponse({
+                success: false,
+                message: "Movie not found."
+            }, 404);
+        }
+
+        const data = await request.json();
+
+        const validationError = validateMovie(data);
+
+        if (validationError) {
+            return jsonResponse({
+                success: false,
+                message: validationError
+            }, 400);
+        }
+
+        const movie = getMovieValues(data);
+
+        await env.DB.prepare(`
+            UPDATE movies
+            SET
+                title = ?,
+                description = ?,
+                language = ?,
+                duration_minutes = ?,
+                certification = ?,
+                poster_url = ?,
+                release_date = ?,
+                status = ?
+            WHERE id = ?
+        `).bind(
+            movie.title,
+            movie.description,
+            movie.language,
+            movie.duration,
+            movie.certification,
+            movie.posterUrl,
+            movie.releaseDate,
+            movie.status,
+            movieId
+        ).run();
+
+        return jsonResponse({
+            success: true,
+            message: "Movie updated successfully.",
+            movieId
+        });
+
+    } catch (error) {
+
+        console.error("ADMIN UPDATE MOVIE ERROR:", error);
+
+        return jsonResponse({
+            success: false,
+            message: "Unable to update movie."
+        }, 500);
     }
 }
 
@@ -236,10 +367,7 @@ export async function onRequestDelete({ request, env }) {
 
     try {
 
-        const requestOrigin = request.headers.get("Origin");
-        const applicationOrigin = new URL(request.url).origin;
-
-        if (requestOrigin !== applicationOrigin) {
+        if (!verifySameOrigin(request)) {
             return jsonResponse({
                 success: false,
                 message: "Request origin could not be verified."
@@ -252,13 +380,9 @@ export async function onRequestDelete({ request, env }) {
             return auth.response;
         }
 
-        const url = new URL(request.url);
-        const movieId = Number(url.searchParams.get("id"));
+        const movieId = getMovieId(request);
 
-        if (
-            !Number.isSafeInteger(movieId) ||
-            movieId < 1
-        ) {
+        if (!movieId) {
             return jsonResponse({
                 success: false,
                 message: "A valid movie ID is required."
@@ -311,6 +435,5 @@ export async function onRequestDelete({ request, env }) {
             success: false,
             message: "Unable to delete movie. It may be linked to other records."
         }, 500);
-
     }
 }
