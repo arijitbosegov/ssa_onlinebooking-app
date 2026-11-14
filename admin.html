@@ -331,6 +331,110 @@
             margin-top: 16px;
         }
 
+
+        .seating-section {
+            background: #1b304d;
+            border: 1px solid #354a63;
+            border-radius: 10px;
+            padding: 24px;
+            margin: 35px 0 25px;
+        }
+
+        .capacity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+            margin: 18px 0 22px;
+        }
+
+        .capacity-card {
+            background: #101827;
+            border: 1px solid #354a63;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .capacity-card h3 {
+            margin: 0 0 10px;
+            font-size: 15px;
+        }
+
+        .capacity-number {
+            color: #ffffff;
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        .capacity-detail {
+            color: #d0d7e2;
+            font-size: 12px;
+            line-height: 1.6;
+            margin-top: 7px;
+        }
+
+        .seat-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .seat-card {
+            background: #101827;
+            border: 1px solid #354a63;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .seat-card p {
+            color: #d0d7e2;
+            font-size: 13px;
+            line-height: 1.55;
+            margin: 7px 0;
+            overflow-wrap: anywhere;
+        }
+
+        .seat-active {
+            color: #a7f0c5;
+            font-weight: bold;
+        }
+
+        .seat-inactive {
+            color: #ffd1d1;
+            font-weight: bold;
+        }
+
+        .seat-action-button {
+            width: 100%;
+            margin-top: 9px;
+        }
+
+        .seat-edit-button {
+            background: #d9b36c;
+            color: #172033;
+        }
+
+        .seat-deactivate-button {
+            background: #8b1e2d;
+            color: #ffffff;
+        }
+
+        .seat-help {
+            color: #f3d28e;
+            background: #354a63;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 650px) {
+            .seating-section {
+                padding: 18px;
+            }
+        }
+
         footer {
             text-align: center;
             padding: 20px;
@@ -538,6 +642,92 @@
             <div id="showList" class="show-list"></div>
         </section>
 
+
+        <section class="seating-section" id="seatingManagementSection">
+            <h2 id="seatFormHeading">SEATING MANAGEMENT</h2>
+            <p style="color:#d0d7e2; line-height:1.6;">
+                Configure the auditorium's master seat list. Each configured seat can be assigned to individual shows later.
+            </p>
+
+            <div class="capacity-grid" id="seatCapacitySummary">
+                <article class="capacity-card">
+                    <h3>GROUND FLOOR</h3>
+                    <div class="capacity-number">512</div>
+                    <div class="capacity-detail">Loading configured seats...</div>
+                </article>
+                <article class="capacity-card">
+                    <h3>BALCONY</h3>
+                    <div class="capacity-number">89</div>
+                    <div class="capacity-detail">Loading configured seats...</div>
+                </article>
+                <article class="capacity-card">
+                    <h3>TOTAL CAPACITY</h3>
+                    <div class="capacity-number">601</div>
+                    <div class="capacity-detail">Planned auditorium capacity</div>
+                </article>
+            </div>
+
+            <form id="seatForm">
+                <div class="form-grid">
+                    <div>
+                        <label for="seatNumber">Seat Number *</label>
+                        <input type="text" id="seatNumber" maxlength="30"
+                               placeholder="Enter actual seat number" required>
+                    </div>
+                    <div>
+                        <label for="seatRow">Row *</label>
+                        <input type="text" id="seatRow" maxlength="20"
+                               placeholder="Enter row identifier" required>
+                    </div>
+                    <div>
+                        <label for="seatPosition">Seat Position *</label>
+                        <input type="number" id="seatPosition" min="1"
+                               step="1" placeholder="Numeric position" required>
+                    </div>
+                    <div>
+                        <label for="seatSection">Auditorium Section *</label>
+                        <select id="seatSection" required>
+                            <option value="GROUND_FLOOR">GROUND FLOOR</option>
+                            <option value="BALCONY">BALCONY</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="seatCategory">Seat Category</label>
+                        <select id="seatCategory">
+                            <option value="STANDARD">STANDARD</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="seatActive">Seat Status *</label>
+                        <select id="seatActive">
+                            <option value="1">ACTIVE</option>
+                            <option value="0">INACTIVE</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="primary-button" id="submitSeatButton">
+                    ADD SEAT
+                </button>
+                <button type="button" class="cancel-button" id="cancelSeatEditButton">
+                    CANCEL EDIT
+                </button>
+            </form>
+
+            <div class="seat-help">
+                IMPORTANT: Enter only seat numbers and row details confirmed from the actual auditorium seating layout. Do not create sample or assumed seat numbers. The current master list is empty; booking remains closed until seat configuration and show-wise inventory generation are completed.
+            </div>
+        </section>
+
+        <section>
+            <h2>MASTER SEAT REGISTER</h2>
+            <button type="button" class="secondary-button" id="refreshSeatsButton">
+                REFRESH SEATING DATA
+            </button>
+            <p id="seatCount">Loading seat records...</p>
+            <div id="seatList" class="seat-list"></div>
+        </section>
+
     </main>
 
     <footer>
@@ -571,10 +761,20 @@
         const submitShowButton = document.getElementById("submitShowButton");
         const cancelShowEditButton = document.getElementById("cancelShowEditButton");
 
+        const seatForm = document.getElementById("seatForm");
+        const seatList = document.getElementById("seatList");
+        const seatCount = document.getElementById("seatCount");
+        const seatCapacitySummary = document.getElementById("seatCapacitySummary");
+        const seatFormHeading = document.getElementById("seatFormHeading");
+        const submitSeatButton = document.getElementById("submitSeatButton");
+        const cancelSeatEditButton = document.getElementById("cancelSeatEditButton");
+
         let editingMovieId = null;
         let moviesCache = [];
         let showsCache = [];
         let editingShowId = null;
+        let editingSeatId = null;
+        let seatsCache = [];
 
         function showMessage(message, success = false) {
 
@@ -973,6 +1173,8 @@
                 if (editingShowId === showId) cancelShowEditing();
                 showMessage(result.message, true);
                 await loadShows();
+                cancelSeatEditing();
+                await loadSeats();
             } catch (error) {
                 showMessage(error.message || "Unable to cancel show.");
                 button.disabled = false;
@@ -1051,6 +1253,238 @@
                 showMessage(error.message || "Unable to load shows.");
             }
         }
+
+
+        function cancelSeatEditing() {
+            editingSeatId = null;
+            seatForm.reset();
+            document.getElementById("seatSection").value = "GROUND_FLOOR";
+            document.getElementById("seatCategory").value = "STANDARD";
+            document.getElementById("seatActive").value = "1";
+            seatFormHeading.textContent = "SEATING MANAGEMENT";
+            submitSeatButton.textContent = "ADD SEAT";
+            cancelSeatEditButton.style.display = "none";
+        }
+
+        function startSeatEditing(seat) {
+            editingSeatId = seat.id;
+            document.getElementById("seatNumber").value = seat.seat_number || "";
+            document.getElementById("seatRow").value = seat.seat_row || "";
+            document.getElementById("seatPosition").value = seat.seat_position || "";
+            document.getElementById("seatSection").value = seat.seat_section || "GROUND_FLOOR";
+            document.getElementById("seatCategory").value = seat.seat_category || "STANDARD";
+            document.getElementById("seatActive").value = String(Number(seat.is_active) === 1 ? 1 : 0);
+            seatFormHeading.textContent = "EDIT SEAT";
+            submitSeatButton.textContent = "UPDATE SEAT";
+            cancelSeatEditButton.style.display = "inline-block";
+            statusMessage.style.display = "none";
+            document.getElementById("seatingManagementSection").scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
+
+        function renderSeatSummary(summary) {
+            const ground = summary && summary.GROUND_FLOOR
+                ? summary.GROUND_FLOOR
+                : { plannedCapacity: 512, configuredSeats: 0, activeSeats: 0, inactiveSeats: 0 };
+            const balcony = summary && summary.BALCONY
+                ? summary.BALCONY
+                : { plannedCapacity: 89, configuredSeats: 0, activeSeats: 0, inactiveSeats: 0 };
+
+            seatCapacitySummary.replaceChildren();
+
+            [
+                { title: "GROUND FLOOR", data: ground },
+                { title: "BALCONY", data: balcony }
+            ].forEach(item => {
+                const card = document.createElement("article");
+                card.className = "capacity-card";
+                card.appendChild(createTextElement("h3", "", item.title));
+                card.appendChild(createTextElement(
+                    "div", "capacity-number",
+                    Number(item.data.configuredSeats || 0) + " / " +
+                    Number(item.data.plannedCapacity || 0)
+                ));
+                card.appendChild(createTextElement(
+                    "div", "capacity-detail",
+                    "Configured: " + Number(item.data.configuredSeats || 0) +
+                    " | Active: " + Number(item.data.activeSeats || 0) +
+                    " | Inactive: " + Number(item.data.inactiveSeats || 0)
+                ));
+                seatCapacitySummary.appendChild(card);
+            });
+
+            const total = document.createElement("article");
+            total.className = "capacity-card";
+            total.appendChild(createTextElement("h3", "", "TOTAL CAPACITY"));
+            total.appendChild(createTextElement("div", "capacity-number", "601"));
+            total.appendChild(createTextElement(
+                "div", "capacity-detail",
+                "Configured: " +
+                (Number(ground.configuredSeats || 0) + Number(balcony.configuredSeats || 0)) +
+                " | Planned auditorium capacity"
+            ));
+            seatCapacitySummary.appendChild(total);
+        }
+
+        async function deactivateSeat(seat, button) {
+            const confirmed = window.confirm(
+                "Deactivate seat " + seat.seat_number +
+                "?\n\nThe seat will remain in the master register but will be marked inactive."
+            );
+            if (!confirmed) return;
+
+            button.disabled = true;
+            button.textContent = "DEACTIVATING...";
+
+            try {
+                const response = await fetch(
+                    "/api/admin/seats?id=" + encodeURIComponent(seat.id),
+                    {
+                        method: "DELETE",
+                        credentials: "same-origin",
+                        cache: "no-store"
+                    }
+                );
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to deactivate seat.");
+                }
+                showMessage(result.message || "Seat deactivated successfully.", true);
+                await loadSeats();
+            } catch (error) {
+                showMessage(error.message || "Unable to deactivate seat.");
+                button.disabled = false;
+                button.textContent = "DEACTIVATE";
+            }
+        }
+
+        async function loadSeats() {
+            seatCount.textContent = "Loading seat records...";
+            seatList.replaceChildren();
+
+            try {
+                const response = await fetch("/api/admin/seats", {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store"
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to load seating data.");
+                }
+
+                seatsCache = result.seats || [];
+                renderSeatSummary(result.summary || {});
+                seatCount.textContent =
+                    "Configured seats: " + seatsCache.length +
+                    " | Planned capacity: " + Number(result.totalPlannedCapacity || 601);
+
+                if (seatsCache.length === 0) {
+                    seatList.appendChild(createTextElement(
+                        "p", "empty-message",
+                        "No seats have been configured. Add actual seat details after referring to the auditorium layout."
+                    ));
+                    return;
+                }
+
+                seatsCache.forEach(seat => {
+                    const card = document.createElement("article");
+                    card.className = "seat-card";
+                    card.appendChild(createTextElement("h3", "", seat.seat_number));
+                    card.appendChild(createTextElement("p", "", "Section: " +
+                        String(seat.seat_section || "").replaceAll("_", " ")));
+                    card.appendChild(createTextElement("p", "", "Row: " + seat.seat_row));
+                    card.appendChild(createTextElement("p", "", "Position: " + seat.seat_position));
+                    card.appendChild(createTextElement("p", "", "Category: " + (seat.seat_category || "STANDARD")));
+                    card.appendChild(createTextElement(
+                        "p",
+                        Number(seat.is_active) === 1 ? "seat-active" : "seat-inactive",
+                        Number(seat.is_active) === 1 ? "ACTIVE" : "INACTIVE"
+                    ));
+
+                    const editButton = document.createElement("button");
+                    editButton.type = "button";
+                    editButton.className = "seat-action-button seat-edit-button";
+                    editButton.textContent = "EDIT SEAT";
+                    editButton.addEventListener("click", () => startSeatEditing(seat));
+                    card.appendChild(editButton);
+
+                    if (Number(seat.is_active) === 1) {
+                        const deactivateButton = document.createElement("button");
+                        deactivateButton.type = "button";
+                        deactivateButton.className = "seat-action-button seat-deactivate-button";
+                        deactivateButton.textContent = "DEACTIVATE";
+                        deactivateButton.addEventListener("click", () =>
+                            deactivateSeat(seat, deactivateButton)
+                        );
+                        card.appendChild(deactivateButton);
+                    }
+
+                    seatList.appendChild(card);
+                });
+            } catch (error) {
+                seatCount.textContent = "Unable to load seat records.";
+                showMessage(error.message || "Unable to load seating data.");
+            }
+        }
+
+        seatForm.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const isEditing = editingSeatId !== null;
+            submitSeatButton.disabled = true;
+            cancelSeatEditButton.disabled = true;
+            submitSeatButton.textContent = isEditing ? "UPDATING SEAT..." : "ADDING SEAT...";
+            statusMessage.style.display = "none";
+
+            const seatData = {
+                seat_number: document.getElementById("seatNumber").value.trim(),
+                seat_row: document.getElementById("seatRow").value.trim(),
+                seat_position: Number(document.getElementById("seatPosition").value),
+                seat_section: document.getElementById("seatSection").value,
+                seat_category: document.getElementById("seatCategory").value,
+                is_active: Number(document.getElementById("seatActive").value)
+            };
+
+            try {
+                const url = isEditing
+                    ? "/api/admin/seats?id=" + encodeURIComponent(editingSeatId)
+                    : "/api/admin/seats";
+                const response = await fetch(url, {
+                    method: isEditing ? "PUT" : "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(seatData)
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to save seat.");
+                }
+
+                showMessage(
+                    result.message || (isEditing ? "Seat updated successfully." : "Seat added successfully."),
+                    true
+                );
+                cancelSeatEditing();
+                await loadSeats();
+            } catch (error) {
+                showMessage(error.message || "Unable to save seat.");
+            } finally {
+                submitSeatButton.disabled = false;
+                submitSeatButton.textContent = editingSeatId !== null ? "UPDATE SEAT" : "ADD SEAT";
+                cancelSeatEditButton.disabled = false;
+            }
+        });
+
+        cancelSeatEditButton.addEventListener("click", function() {
+            cancelSeatEditing();
+            statusMessage.style.display = "none";
+        });
+
+        document.getElementById("refreshSeatsButton")
+            .addEventListener("click", loadSeats);
 
         showForm.addEventListener("submit", async function(event) {
             event.preventDefault();
