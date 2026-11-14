@@ -438,7 +438,7 @@
 
         .admin-tabs {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 10px;
             margin: 8px 0 24px;
             padding: 10px;
@@ -474,6 +474,45 @@
 
         .admin-tab-panel {
             scroll-margin-top: 90px;
+        }
+
+        .user-card {
+            background: #1b304d;
+            border: 1px solid #354a63;
+            border-radius: 10px;
+            padding: 18px;
+        }
+
+        .user-card p {
+            color: #d0d7e2;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .user-status-active {
+            color: #a7f0c5 !important;
+            font-weight: bold;
+        }
+
+        .user-status-suspended {
+            color: #ffd1d1 !important;
+            font-weight: bold;
+        }
+
+        .user-action-button {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .user-suspend-button {
+            background: #8b1e2d;
+            color: #ffffff;
+        }
+
+        .user-reactivate-button {
+            background: #d9b36c;
+            color: #172033;
         }
 
         @media (max-width: 760px) {
@@ -576,6 +615,7 @@
             <button type="button" class="admin-tab" role="tab" id="tabMovieLibrary" aria-controls="panelMovieLibrary" aria-selected="false" data-tab="movieLibrary">MOVIE LIBRARY</button>
             <button type="button" class="admin-tab" role="tab" id="tabShowManagement" aria-controls="panelShowManagement" aria-selected="false" data-tab="showManagement">SHOW MANAGEMENT</button>
             <button type="button" class="admin-tab" role="tab" id="tabSeatingManagement" aria-controls="panelSeatingManagement" aria-selected="false" data-tab="seatingManagement">SEATING MANAGEMENT</button>
+            <button type="button" class="admin-tab" role="tab" id="tabUserManagement" aria-controls="panelUserManagement" aria-selected="false" data-tab="userManagement">USER MANAGEMENT</button>
         </nav>
 
         <section class="admin-tab-panel" id="panelAddMovie" role="tabpanel" aria-labelledby="tabAddMovie">
@@ -719,6 +759,70 @@
 
         </section>
 
+
+        <section class="admin-tab-panel" id="panelUserManagement" role="tabpanel" aria-labelledby="tabUserManagement" hidden>
+            <section class="seating-section">
+                <h2>USER MANAGEMENT</h2>
+                <p style="color:#d0d7e2; line-height:1.6;">
+                    View registered accounts, search and filter users, and manage account status.
+                    Passwords and authentication secrets are never displayed.
+                </p>
+
+                <div class="form-grid">
+                    <div>
+                        <label for="userSearch">Search users</label>
+                        <input type="search" id="userSearch" maxlength="100"
+                               placeholder="Name, email, mobile or user ID">
+                    </div>
+                    <div>
+                        <label for="userCategoryFilter">User Category</label>
+                        <select id="userCategoryFilter">
+                            <option value="">ALL CATEGORIES</option>
+                            <option value="OFFICER">OFFICER</option>
+                            <option value="JCO">JCO</option>
+                            <option value="OR">OR</option>
+                            <option value="DEPENDANT">DEPENDANT</option>
+                            <option value="GUEST">GUEST</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="userServiceFilter">Service Classification</label>
+                        <select id="userServiceFilter">
+                            <option value="">ALL CLASSIFICATIONS</option>
+                            <option value="SERVING">SERVING</option>
+                            <option value="EX_SERVICEMAN">EX-SERVICEMAN</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="userStatusFilter">Account Status</label>
+                        <select id="userStatusFilter">
+                            <option value="">ALL STATUSES</option>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="SUSPENDED">SUSPENDED</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="button" class="primary-button" id="applyUserFiltersButton">SEARCH USERS</button>
+                <button type="button" class="secondary-button" id="resetUserFiltersButton">RESET FILTERS</button>
+                <button type="button" class="secondary-button" id="refreshUsersButton">REFRESH USERS</button>
+
+                <p id="userCount">Loading registered users...</p>
+                <div id="userList" class="seat-list"></div>
+
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:20px;">
+                    <button type="button" class="secondary-button" id="previousUsersPageButton">PREVIOUS</button>
+                    <span id="usersPageInfo" style="color:#d0d7e2;">Page 1</span>
+                    <button type="button" class="secondary-button" id="nextUsersPageButton">NEXT</button>
+                </div>
+
+                <div class="seat-help">
+                    Account suspension prevents the user from signing in. Reactivation restores access.
+                    Super Admin accounts cannot be suspended through this screen. User records are never permanently deleted.
+                </div>
+            </section>
+        </section>
+
         <section class="admin-tab-panel" id="panelSeatingManagement" role="tabpanel" aria-labelledby="tabSeatingManagement" hidden>
         <section class="seating-section" id="seatingManagementSection">
             <h2 id="seatFormHeading">SEATING MANAGEMENT</h2>
@@ -847,6 +951,20 @@
         const submitSeatButton = document.getElementById("submitSeatButton");
         const cancelSeatEditButton = document.getElementById("cancelSeatEditButton");
 
+        const userList = document.getElementById("userList");
+        const userCount = document.getElementById("userCount");
+        const userSearch = document.getElementById("userSearch");
+        const userCategoryFilter = document.getElementById("userCategoryFilter");
+        const userServiceFilter = document.getElementById("userServiceFilter");
+        const userStatusFilter = document.getElementById("userStatusFilter");
+        const previousUsersPageButton = document.getElementById("previousUsersPageButton");
+        const nextUsersPageButton = document.getElementById("nextUsersPageButton");
+        const usersPageInfo = document.getElementById("usersPageInfo");
+
+        let usersPage = 1;
+        let usersTotalPages = 1;
+        let usersCache = [];
+
         let editingMovieId = null;
         let moviesCache = [];
         let showsCache = [];
@@ -872,7 +990,12 @@
         }
 
         document.querySelectorAll(".admin-tab").forEach(tab => {
-            tab.addEventListener("click", () => activateAdminTab(tab.dataset.tab));
+            tab.addEventListener("click", () => {
+                activateAdminTab(tab.dataset.tab);
+                if (tab.dataset.tab === "userManagement") {
+                    loadUsers();
+                }
+            });
         });
 
         function showMessage(message, success = false) {
@@ -1355,6 +1478,218 @@
             }
         }
 
+
+
+        function getUserFilterQuery() {
+            const params = new URLSearchParams();
+            const search = userSearch.value.trim();
+            if (search) params.set("search", search);
+            if (userCategoryFilter.value) params.set("category", userCategoryFilter.value);
+            if (userServiceFilter.value) params.set("service_category", userServiceFilter.value);
+            if (userStatusFilter.value) params.set("status", userStatusFilter.value);
+            params.set("page", String(usersPage));
+            params.set("limit", "20");
+            return params.toString();
+        }
+
+        async function loadUsers() {
+            userCount.textContent = "Loading registered users...";
+            userList.replaceChildren();
+
+            try {
+                const response = await fetch(
+                    "/api/admin/users?" + getUserFilterQuery(),
+                    {
+                        method: "GET",
+                        credentials: "same-origin",
+                        cache: "no-store"
+                    }
+                );
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to load user records.");
+                }
+
+                usersCache = result.users || [];
+                const pagination = result.pagination || {};
+                usersPage = Number(pagination.page || 1);
+                usersTotalPages = Math.max(1, Number(pagination.totalPages || 1));
+
+                userCount.textContent =
+                    "Registered users: " + Number(pagination.total || 0) +
+                    " | Showing " + usersCache.length + " on this page";
+
+                usersPageInfo.textContent =
+                    "Page " + usersPage + " of " + usersTotalPages;
+
+                previousUsersPageButton.disabled = !pagination.hasPreviousPage;
+                nextUsersPageButton.disabled = !pagination.hasNextPage;
+
+                if (usersCache.length === 0) {
+                    userList.appendChild(createTextElement(
+                        "p",
+                        "empty-message",
+                        "No user records match the selected filters."
+                    ));
+                    return;
+                }
+
+                usersCache.forEach(user => {
+                    const card = document.createElement("article");
+                    card.className = "user-card";
+
+                    card.appendChild(createTextElement(
+                        "h3", "", user.fullName || "Unnamed user"
+                    ));
+                    card.appendChild(createTextElement("p", "", "User ID: " + user.id));
+                    card.appendChild(createTextElement("p", "", "Email: " + (user.email || "Not available")));
+                    card.appendChild(createTextElement("p", "", "Mobile: " + (user.mobile || "Not available")));
+
+                    const categoryText = user.category || "Not specified";
+                    const serviceText = user.serviceCategory
+                        ? String(user.serviceCategory).replaceAll("_", " ")
+                        : "Not applicable";
+                    card.appendChild(createTextElement(
+                        "p", "", "Category: " + categoryText + " | " + serviceText
+                    ));
+
+                    card.appendChild(createTextElement(
+                        "p", "", "Role: " + (user.role || "USER")
+                    ));
+
+                    card.appendChild(createTextElement(
+                        "p",
+                        user.status === "ACTIVE" ? "user-status-active" : "user-status-suspended",
+                        "Account status: " + user.status
+                    ));
+
+                    card.appendChild(createTextElement(
+                        "p", "",
+                        "Email verified: " + (user.emailVerified ? "YES" : "NO") +
+                        " | Mobile verified: " + (user.mobileVerified ? "YES" : "NO")
+                    ));
+
+                    card.appendChild(createTextElement(
+                        "p", "", "Registered: " + (user.createdAt || "Not available")
+                    ));
+
+                    if (user.role !== "SUPER_ADMIN") {
+                        const actionButton = document.createElement("button");
+                        actionButton.type = "button";
+                        actionButton.className = "user-action-button " +
+                            (user.status === "ACTIVE"
+                                ? "user-suspend-button"
+                                : "user-reactivate-button");
+                        actionButton.textContent = user.status === "ACTIVE"
+                            ? "SUSPEND ACCOUNT"
+                            : "REACTIVATE ACCOUNT";
+                        actionButton.addEventListener("click", () =>
+                            changeUserStatus(user, actionButton)
+                        );
+                        card.appendChild(actionButton);
+                    } else {
+                        card.appendChild(createTextElement(
+                            "p", "seat-help", "Protected Super Admin account"
+                        ));
+                    }
+
+                    userList.appendChild(card);
+                });
+
+            } catch (error) {
+                userCount.textContent = "Unable to load user records.";
+                showMessage(error.message || "Unable to load users.");
+            }
+        }
+
+        async function changeUserStatus(user, button) {
+            const newStatus = user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
+            const action = newStatus === "SUSPENDED" ? "suspend" : "reactivate";
+
+            const confirmed = window.confirm(
+                "Are you sure you want to " + action + " the account for " +
+                user.fullName + "?\n\n" +
+                (newStatus === "SUSPENDED"
+                    ? "The user will no longer be able to sign in."
+                    : "The user will regain the ability to sign in.")
+            );
+
+            if (!confirmed) return;
+
+            button.disabled = true;
+            button.textContent = newStatus === "SUSPENDED"
+                ? "SUSPENDING..."
+                : "REACTIVATING...";
+
+            try {
+                const response = await fetch("/api/admin/users", {
+                    method: "PUT",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        user_id: user.id,
+                        status: newStatus
+                    })
+                });
+
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to update account status.");
+                }
+
+                showMessage(result.message, true);
+                await loadUsers();
+
+            } catch (error) {
+                showMessage(error.message || "Unable to update account status.");
+                button.disabled = false;
+                button.textContent = newStatus === "SUSPENDED"
+                    ? "SUSPEND ACCOUNT"
+                    : "REACTIVATE ACCOUNT";
+            }
+        }
+
+        document.getElementById("applyUserFiltersButton")
+            .addEventListener("click", () => {
+                usersPage = 1;
+                loadUsers();
+            });
+
+        document.getElementById("resetUserFiltersButton")
+            .addEventListener("click", () => {
+                userSearch.value = "";
+                userCategoryFilter.value = "";
+                userServiceFilter.value = "";
+                userStatusFilter.value = "";
+                usersPage = 1;
+                loadUsers();
+            });
+
+        document.getElementById("refreshUsersButton")
+            .addEventListener("click", loadUsers);
+
+        userSearch.addEventListener("keydown", event => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                usersPage = 1;
+                loadUsers();
+            }
+        });
+
+        previousUsersPageButton.addEventListener("click", () => {
+            if (usersPage > 1) {
+                usersPage -= 1;
+                loadUsers();
+            }
+        });
+
+        nextUsersPageButton.addEventListener("click", () => {
+            if (usersPage < usersTotalPages) {
+                usersPage += 1;
+                loadUsers();
+            }
+        });
 
         function cancelSeatEditing() {
             editingSeatId = null;
