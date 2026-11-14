@@ -77,15 +77,102 @@ async function hashOTP(userId, otp, secret) {
     return bytesToHex(new Uint8Array(signature));
 }
 
+async function sendMailjetEmail(env, recipient, recipientName, otp) {
+    const authentication = btoa(
+        `${env.MAILJET_API_KEY}:${env.MAILJET_SECRET_KEY}`
+    );
+
+    const response = await fetch(
+        "https://api.mailjet.com/v3.1/send",
+        {
+            method: "POST",
+            headers: {
+                "Authorization": `Basic ${authentication}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                Messages: [
+                    {
+                        From: {
+                            Email: env.MAILJET_FROM_EMAIL,
+                            Name: "SAPTA SHAKTI AUDITORIUM"
+                        },
+                        To: [
+                            {
+                                Email: recipient,
+                                Name: recipientName
+                            }
+                        ],
+                        Subject: "Your SAPTA SHAKTI AUDITORIUM verification code",
+                        HTMLPart: `
+                            <div style="font-family:Arial,sans-serif;padding:25px">
+                                <h2>SAPTA SHAKTI AUDITORIUM</h2>
+                                <p>Dear ${escapeHTML(recipientName)},</p>
+                                <p>Your email verification OTP is:</p>
+                                <h1 style="letter-spacing:8px">${otp}</h1>
+                                <p>This code expires in 5 minutes.</p>
+                                <p>If you did not request this code, please ignore this email.</p>
+                            </div>
+                        `,
+                        TextPart: `Dear ${recipientName}, your SAPTA SHAKTI AUDITORIUM verification OTP is ${otp}. It expires in 5 minutes.`
+                    }
+                ]
+            })
+        }
+    );
+
+    const responseText = await response.text();
+
+    let result;
+
+    try {
+        result = JSON.parse(responseText);
+    } catch {
+        result = null;
+    }
+
+    if (!response.ok) {
+        console.error("MAILJET HTTP ERROR:", {
+            status: response.status,
+            response: responseText
+        });
+
+        throw new Error(
+            `Mailjet rejected the request. HTTP ${response.status}`
+        );
+    }
+
+    const messageResult = result?.Messages?.[0];
+
+    if (!messageResult || messageResult.Status !== "success") {
+        console.error("MAILJET DELIVERY ERROR:", {
+            status: messageResult?.Status || "Unknown",
+            response: responseText
+        });
+
+        throw new Error("Mailjet did not accept the email.");
+    }
+
+    return true;
+}
+
 export async function onRequestPost({ request, env }) {
     let userId = null;
     let stage = "configuration";
 
     try {
-        if (!env.DB || !env.RESEND_API_KEY || !env.OTP_HMAC_SECRET) {
+        if (
+            !env.DB ||
+            !env.MAILJET_API_KEY ||
+            !env.MAILJET_SECRET_KEY ||
+            !env.MAILJET_FROM_EMAIL ||
+            !env.OTP_HMAC_SECRET
+        ) {
             console.error("Missing server configuration:", {
                 DB: !!env.DB,
-                RESEND_API_KEY: !!env.RESEND_API_KEY,
+                MAILJET_API_KEY: !!env.MAILJET_API_KEY,
+                MAILJET_SECRET_KEY: !!env.MAILJET_SECRET_KEY,
+                MAILJET_FROM_EMAIL: !!env.MAILJET_FROM_EMAIL,
                 OTP_HMAC_SECRET: !!env.OTP_HMAC_SECRET
             });
 
@@ -258,51 +345,16 @@ export async function onRequestPost({ request, env }) {
             expiresAt
         ).run();
 
-        stage = "resend_email";
+        stage = "mailjet_email";
 
-        const safeName = escapeHTML(fullName);
-
-        const emailResponse = await fetch(
-            "https://api.resend.com/emails",
-            {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${env.RESEND_API_KEY}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    from: "SAPTA SHAKTI AUDITORIUM <onboarding@resend.dev>",
-                    to: [email],
-                    subject: "Your SAPTA SHAKTI AUDITORIUM verification code",
-                    html: `
-                        <div style="font-family:Arial,sans-serif;padding:25px">
-                            <h2>SAPTA SHAKTI AUDITORIUM</h2>
-                            <p>Dear ${safeName},</p>
-                            <p>Your email verification OTP is:</p>
-                            <h1 style="letter-spacing:8px">${otp}</h1>
-                            <p>This code expires in 5 minutes.</p>
-                            <p>If you did not request this code, please ignore this email.</p>
-                        </div>
-                    `,
-                    text: `Dear ${fullName}, your SAPTA SHAKTI AUDITORIUM verification OTP is ${otp}. It expires in 5 minutes.`
-                })
-            }
+        await sendMailjetEmail(
+            env,
+            email,
+            fullName,
+            otp
         );
 
-        if (!emailResponse.ok) {
-            const resendError = await emailResponse.text();
-
-            console.error("RESEND DELIVERY ERROR:", {
-                status: emailResponse.status,
-                response: resendError
-            });
-
-            throw new Error(
-                `Resend rejected the request. HTTP ${emailResponse.status}`
-            );
-        }
-
-        console.log("Registration and OTP email request successful.");
+        console.log("Registration and Mailjet OTP email request successful.");
 
         return json({
             success: true,
