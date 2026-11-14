@@ -435,6 +435,66 @@
             }
         }
 
+
+        .admin-tabs {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin: 8px 0 24px;
+            padding: 10px;
+            background: #192d46;
+            border: 1px solid #354a63;
+            border-radius: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .admin-tab {
+            background: #354a63;
+            color: #f1f1f1;
+            border: 1px solid #526982;
+            padding: 14px 10px;
+            min-height: 48px;
+        }
+
+        .admin-tab:hover {
+            background: #405a77;
+        }
+
+        .admin-tab.active {
+            background: #d9b36c;
+            color: #172033;
+            border-color: #e9c982;
+        }
+
+        .admin-tab-panel[hidden] {
+            display: none !important;
+        }
+
+        .admin-tab-panel {
+            scroll-margin-top: 90px;
+        }
+
+        @media (max-width: 760px) {
+            .admin-tabs {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                position: static;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .admin-tabs {
+                grid-template-columns: 1fr 1fr;
+                gap: 7px;
+                padding: 7px;
+            }
+            .admin-tab {
+                padding: 11px 6px;
+                font-size: 12px;
+            }
+        }
+
         footer {
             text-align: center;
             padding: 20px;
@@ -511,6 +571,14 @@
         <div id="statusMessage" class="status-message"
              role="status" aria-live="polite"></div>
 
+        <nav class="admin-tabs" role="tablist" aria-label="Administration sections">
+            <button type="button" class="admin-tab active" role="tab" id="tabAddMovie" aria-controls="panelAddMovie" aria-selected="true" data-tab="addMovie">ADD NEW MOVIE</button>
+            <button type="button" class="admin-tab" role="tab" id="tabMovieLibrary" aria-controls="panelMovieLibrary" aria-selected="false" data-tab="movieLibrary">MOVIE LIBRARY</button>
+            <button type="button" class="admin-tab" role="tab" id="tabShowManagement" aria-controls="panelShowManagement" aria-selected="false" data-tab="showManagement">SHOW MANAGEMENT</button>
+            <button type="button" class="admin-tab" role="tab" id="tabSeatingManagement" aria-controls="panelSeatingManagement" aria-selected="false" data-tab="seatingManagement">SEATING MANAGEMENT</button>
+        </nav>
+
+        <section class="admin-tab-panel" id="panelAddMovie" role="tabpanel" aria-labelledby="tabAddMovie">
         <section class="form-card" id="movieFormSection">
 
             <h2 id="formHeading">ADD NEW MOVIE</h2>
@@ -587,6 +655,9 @@
 
         </section>
 
+        </section>
+
+        <section class="admin-tab-panel" id="panelMovieLibrary" role="tabpanel" aria-labelledby="tabMovieLibrary" hidden>
         <section>
 
             <h2>MOVIE LIBRARY</h2>
@@ -602,6 +673,9 @@
 
         </section>
 
+        </section>
+
+        <section class="admin-tab-panel" id="panelShowManagement" role="tabpanel" aria-labelledby="tabShowManagement" hidden>
         <section class="show-form-card" id="showFormSection">
             <h2 id="showFormHeading">SHOW MANAGEMENT</h2>
             <p style="color:#d0d7e2; line-height:1.6;">Create and manage Matinee and Evening shows. Only one show of each type can be scheduled per day.</p>
@@ -643,6 +717,9 @@
         </section>
 
 
+        </section>
+
+        <section class="admin-tab-panel" id="panelSeatingManagement" role="tabpanel" aria-labelledby="tabSeatingManagement" hidden>
         <section class="seating-section" id="seatingManagementSection">
             <h2 id="seatFormHeading">SEATING MANAGEMENT</h2>
             <p style="color:#d0d7e2; line-height:1.6;">
@@ -727,6 +804,7 @@
             <p id="seatCount">Loading seat records...</p>
             <div id="seatList" class="seat-list"></div>
         </section>
+        </section>
 
     </main>
 
@@ -775,6 +853,27 @@
         let editingShowId = null;
         let editingSeatId = null;
         let seatsCache = [];
+
+        function activateAdminTab(tabName, shouldScroll = false) {
+            const tabs = document.querySelectorAll(".admin-tab");
+            const panels = document.querySelectorAll(".admin-tab-panel");
+            tabs.forEach(tab => {
+                const active = tab.dataset.tab === tabName;
+                tab.classList.toggle("active", active);
+                tab.setAttribute("aria-selected", active ? "true" : "false");
+                tab.tabIndex = active ? 0 : -1;
+            });
+            panels.forEach(panel => {
+                panel.hidden = panel.id !== "panel" + tabName.charAt(0).toUpperCase() + tabName.slice(1);
+            });
+            if (shouldScroll) {
+                document.querySelector(".admin-tabs").scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }
+
+        document.querySelectorAll(".admin-tab").forEach(tab => {
+            tab.addEventListener("click", () => activateAdminTab(tab.dataset.tab));
+        });
 
         function showMessage(message, success = false) {
 
@@ -843,6 +942,7 @@
 
         function startEditing(movie) {
 
+            activateAdminTab("addMovie");
             editingMovieId = movie.id;
 
             document.getElementById("title").value =
@@ -1138,6 +1238,7 @@
                 return;
             }
 
+            activateAdminTab("showManagement");
             editingShowId = show.id;
             showMovieSelect.value = String(show.movie_id);
             document.getElementById("showDate").value = show.show_date;
@@ -1267,6 +1368,7 @@
         }
 
         function startSeatEditing(seat) {
+            activateAdminTab("seatingManagement");
             editingSeatId = seat.id;
             document.getElementById("seatNumber").value = seat.seat_number || "";
             document.getElementById("seatRow").value = seat.seat_row || "";
