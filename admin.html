@@ -252,6 +252,85 @@
             margin-top: 8px;
         }
 
+        .show-form-card {
+            background: #1b304d;
+            border: 1px solid #354a63;
+            border-radius: 10px;
+            padding: 24px;
+            margin: 35px 0 25px;
+        }
+
+        .show-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        .show-card {
+            background: #1b304d;
+            border: 1px solid #354a63;
+            border-radius: 10px;
+            padding: 18px;
+        }
+
+        .show-card p {
+            color: #d0d7e2;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .show-type-badge {
+            display: inline-block;
+            background: #354a63;
+            color: #f3d28e;
+            padding: 5px 9px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .show-status-badge {
+            display: inline-block;
+            background: #173f32;
+            color: #a7f0c5;
+            padding: 5px 9px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 6px;
+        }
+
+        .show-status-cancelled {
+            background: #57232b;
+            color: #ffd1d1;
+        }
+
+        .show-action-button {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .show-edit-button {
+            background: #d9b36c;
+            color: #172033;
+        }
+
+        .show-cancel-button {
+            background: #8b1e2d;
+            color: #ffffff;
+        }
+
+        .booking-notice {
+            color: #f3d28e;
+            background: #354a63;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-top: 16px;
+        }
+
         footer {
             text-align: center;
             padding: 20px;
@@ -278,6 +357,10 @@
 
             .form-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .show-form-card {
+                padding: 18px;
             }
 
             .logout-button,
@@ -415,6 +498,46 @@
 
         </section>
 
+        <section class="show-form-card" id="showFormSection">
+            <h2 id="showFormHeading">SHOW MANAGEMENT</h2>
+            <p style="color:#d0d7e2; line-height:1.6;">Create and manage Matinee and Evening shows. Only one show of each type can be scheduled per day.</p>
+
+            <form id="showForm">
+                <label for="showMovie">Select Movie *</label>
+                <select id="showMovie" required>
+                    <option value="">Loading active movies...</option>
+                </select>
+
+                <div class="form-grid">
+                    <div>
+                        <label for="showDate">Show Date *</label>
+                        <input type="date" id="showDate" required>
+                    </div>
+                    <div>
+                        <label for="showType">Show Type *</label>
+                        <select id="showType" required>
+                            <option value="MATINEE">MATINEE</option>
+                            <option value="EVENING">EVENING</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="booking-notice">
+                    Booking will remain CLOSED until the auditorium seating layout is configured and seat inventory is generated for each show. No ticket price is set on this screen.
+                </div>
+
+                <button type="submit" class="primary-button" id="submitShowButton">CREATE SHOW</button>
+                <button type="button" class="cancel-button" id="cancelShowEditButton">CANCEL EDIT</button>
+            </form>
+        </section>
+
+        <section>
+            <h2>SHOW SCHEDULE</h2>
+            <button type="button" class="secondary-button" id="refreshShowsButton">REFRESH SHOWS</button>
+            <p id="showCount">Loading show records...</p>
+            <div id="showList" class="show-list"></div>
+        </section>
+
     </main>
 
     <footer>
@@ -440,8 +563,18 @@
         const editingNotice =
             document.getElementById("editingNotice");
 
+        const showForm = document.getElementById("showForm");
+        const showList = document.getElementById("showList");
+        const showCount = document.getElementById("showCount");
+        const showMovieSelect = document.getElementById("showMovie");
+        const showFormHeading = document.getElementById("showFormHeading");
+        const submitShowButton = document.getElementById("submitShowButton");
+        const cancelShowEditButton = document.getElementById("cancelShowEditButton");
+
         let editingMovieId = null;
         let moviesCache = [];
+        let showsCache = [];
+        let editingShowId = null;
 
         function showMessage(message, success = false) {
 
@@ -637,6 +770,7 @@
 
                 const movies = result.movies || [];
                 moviesCache = movies;
+                populateShowMovieOptions();
 
                 movieCount.textContent =
                     "Total movies: " + movies.length;
@@ -758,6 +892,215 @@
                 showMessage(error.message);
             }
         }
+
+        function populateShowMovieOptions() {
+            const activeMovies = moviesCache.filter(movie => movie.status === "ACTIVE");
+            const currentValue = showMovieSelect.value;
+            showMovieSelect.replaceChildren();
+
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = activeMovies.length
+                ? "Select an active movie"
+                : "No active movies available";
+            showMovieSelect.appendChild(placeholder);
+
+            activeMovies.forEach(movie => {
+                const option = document.createElement("option");
+                option.value = String(movie.id);
+                option.textContent = movie.title;
+                showMovieSelect.appendChild(option);
+            });
+
+            if (activeMovies.some(movie => String(movie.id) === currentValue)) {
+                showMovieSelect.value = currentValue;
+            }
+
+            showMovieSelect.disabled = activeMovies.length === 0;
+            submitShowButton.disabled = activeMovies.length === 0;
+        }
+
+        function cancelShowEditing() {
+            editingShowId = null;
+            showForm.reset();
+            showFormHeading.textContent = "SHOW MANAGEMENT";
+            submitShowButton.textContent = "CREATE SHOW";
+            cancelShowEditButton.style.display = "none";
+            const today = new Date();
+            const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+                .toISOString().slice(0, 10);
+            document.getElementById("showDate").value = localDate;
+        }
+
+        function startShowEditing(show) {
+            if (show.status !== "SCHEDULED") {
+                showMessage("Only scheduled shows can be edited.");
+                return;
+            }
+
+            editingShowId = show.id;
+            showMovieSelect.value = String(show.movie_id);
+            document.getElementById("showDate").value = show.show_date;
+            document.getElementById("showType").value = show.show_type;
+            showFormHeading.textContent = "EDIT SHOW";
+            submitShowButton.textContent = "UPDATE SHOW";
+            cancelShowEditButton.style.display = "inline-block";
+            statusMessage.style.display = "none";
+            document.getElementById("showFormSection").scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
+
+        async function cancelShow(showId, showType, button) {
+            const confirmed = window.confirm(
+                "Cancel this " + showType + " show?\n\nThe show will remain in the records, but booking will be closed."
+            );
+            if (!confirmed) return;
+
+            button.disabled = true;
+            button.textContent = "CANCELLING...";
+
+            try {
+                const response = await fetch(
+                    "/api/admin/shows?id=" + encodeURIComponent(showId),
+                    { method: "DELETE", credentials: "same-origin", cache: "no-store" }
+                );
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to cancel show.");
+                }
+                if (editingShowId === showId) cancelShowEditing();
+                showMessage(result.message, true);
+                await loadShows();
+            } catch (error) {
+                showMessage(error.message || "Unable to cancel show.");
+                button.disabled = false;
+                button.textContent = "CANCEL SHOW";
+            }
+        }
+
+        async function loadShows() {
+            showCount.textContent = "Loading shows...";
+            showList.replaceChildren();
+
+            try {
+                const response = await fetch("/api/admin/shows", {
+                    method: "GET", credentials: "same-origin", cache: "no-store"
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to load shows.");
+                }
+
+                showsCache = result.shows || [];
+                showCount.textContent = "Total shows: " + showsCache.length;
+
+                if (showsCache.length === 0) {
+                    showList.appendChild(createTextElement(
+                        "p", "empty-message", "No shows have been scheduled yet."
+                    ));
+                    return;
+                }
+
+                showsCache.forEach(show => {
+                    const card = document.createElement("article");
+                    card.className = "show-card";
+                    card.appendChild(createTextElement("h3", "", show.movie_title || "Movie unavailable"));
+                    card.appendChild(createTextElement("p", "", "Date: " + show.show_date));
+
+                    const typeBadge = createTextElement("span", "show-type-badge", show.show_type);
+                    const statusBadge = createTextElement(
+                        "span",
+                        "show-status-badge" + (show.status === "CANCELLED" ? " show-status-cancelled" : ""),
+                        show.status
+                    );
+                    card.appendChild(typeBadge);
+                    card.appendChild(statusBadge);
+
+                    card.appendChild(createTextElement(
+                        "p", "", "Booking: " + (Number(show.booking_open) === 1 ? "OPEN" : "CLOSED")
+                    ));
+                    card.appendChild(createTextElement(
+                        "p", "", "Seat inventory: " + Number(show.show_seat_count || 0) +
+                        " / " + Number(show.configured_seats || 0)
+                    ));
+
+                    if (show.status === "SCHEDULED") {
+                        const editButton = document.createElement("button");
+                        editButton.type = "button";
+                        editButton.className = "show-action-button show-edit-button";
+                        editButton.textContent = "EDIT SHOW";
+                        editButton.addEventListener("click", () => startShowEditing(show));
+                        card.appendChild(editButton);
+
+                        const cancelButton = document.createElement("button");
+                        cancelButton.type = "button";
+                        cancelButton.className = "show-action-button show-cancel-button";
+                        cancelButton.textContent = "CANCEL SHOW";
+                        cancelButton.addEventListener("click", () =>
+                            cancelShow(show.id, show.show_type, cancelButton)
+                        );
+                        card.appendChild(cancelButton);
+                    }
+
+                    showList.appendChild(card);
+                });
+            } catch (error) {
+                showCount.textContent = "Unable to load show records.";
+                showMessage(error.message || "Unable to load shows.");
+            }
+        }
+
+        showForm.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const isEditing = editingShowId !== null;
+            submitShowButton.disabled = true;
+            cancelShowEditButton.disabled = true;
+            submitShowButton.textContent = isEditing ? "UPDATING SHOW..." : "CREATING SHOW...";
+            statusMessage.style.display = "none";
+
+            const showData = {
+                movie_id: Number(showMovieSelect.value),
+                show_date: document.getElementById("showDate").value,
+                show_type: document.getElementById("showType").value
+            };
+
+            try {
+                const url = isEditing
+                    ? "/api/admin/shows?id=" + encodeURIComponent(editingShowId)
+                    : "/api/admin/shows";
+                const response = await fetch(url, {
+                    method: isEditing ? "PUT" : "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(showData)
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to save show.");
+                }
+
+                showMessage(result.message + (result.showId ? " Show ID: " + result.showId : ""), true);
+                cancelShowEditing();
+                await loadShows();
+            } catch (error) {
+                showMessage(error.message || "Unable to save show.");
+            } finally {
+                submitShowButton.disabled = false;
+                submitShowButton.textContent = editingShowId !== null ? "UPDATE SHOW" : "CREATE SHOW";
+                cancelShowEditButton.disabled = false;
+            }
+        });
+
+        cancelShowEditButton.addEventListener("click", function() {
+            cancelShowEditing();
+            statusMessage.style.display = "none";
+        });
+
+        document.getElementById("refreshShowsButton")
+            .addEventListener("click", loadShows);
 
         movieForm.addEventListener("submit", async function(event) {
 
@@ -908,6 +1251,8 @@
 
             if (authorised) {
                 await loadMovies();
+                cancelShowEditing();
+                await loadShows();
             }
         }
 
