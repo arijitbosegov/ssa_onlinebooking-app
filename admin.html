@@ -476,33 +476,64 @@
             scroll-margin-top: 90px;
         }
 
-        .user-card {
-            background: #1b304d;
+        .user-table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #526982;
+            border-radius: 8px;
+            background: #14243a;
+            margin-top: 14px;
+        }
+
+        .user-table {
+            width: 100%;
+            min-width: 1450px;
+            border-collapse: collapse;
+            color: #ffffff;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .user-table th {
+            position: sticky;
+            top: 0;
+            background: #354a63;
+            color: #f3d28e;
+            text-align: left;
+            padding: 12px 10px;
+            border: 1px solid #526982;
+            font-size: 11px;
+            letter-spacing: .3px;
+        }
+
+        .user-table td {
+            padding: 10px;
             border: 1px solid #354a63;
-            border-radius: 10px;
-            padding: 18px;
+            vertical-align: middle;
         }
 
-        .user-card p {
-            color: #d0d7e2;
-            font-size: 13px;
-            line-height: 1.6;
-            overflow-wrap: anywhere;
+        .user-table tbody tr:nth-child(even) {
+            background: #1b304d;
         }
 
-        .user-status-active {
-            color: #a7f0c5 !important;
+        .user-table tbody tr:hover {
+            background: #29435f;
+        }
+
+        .user-table .user-status-active {
+            color: #a7f0c5;
             font-weight: bold;
         }
 
-        .user-status-suspended {
-            color: #ffd1d1 !important;
+        .user-table .user-status-suspended {
+            color: #ffd1d1;
             font-weight: bold;
         }
 
         .user-action-button {
-            width: 100%;
-            margin-top: 10px;
+            min-width: 125px;
+            padding: 8px 10px;
+            font-size: 11px;
         }
 
         .user-suspend-button {
@@ -513,6 +544,12 @@
         .user-reactivate-button {
             background: #d9b36c;
             color: #172033;
+        }
+
+        .user-table-note {
+            color: #d0d7e2;
+            font-size: 12px;
+            margin: 8px 0;
         }
 
         @media (max-width: 760px) {
@@ -807,8 +844,19 @@
                 <button type="button" class="secondary-button" id="resetUserFiltersButton">RESET FILTERS</button>
                 <button type="button" class="secondary-button" id="refreshUsersButton">REFRESH USERS</button>
 
-                <p id="userCount">Loading registered users...</p>
-                <div id="userList" class="seat-list"></div>
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between; margin-top:18px;">
+                    <p id="userCount" style="margin:0;">Loading registered users...</p>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <label for="usersPageSize" style="margin:0; white-space:nowrap;">Rows per page</label>
+                        <select id="usersPageSize" style="width:auto; min-width:85px;">
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100" selected>100</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="user-table-note">Scroll horizontally to view all columns. Use search and filters to narrow large user lists.</p>
+                <div id="userList" class="user-table-wrap"></div>
 
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:20px;">
                     <button type="button" class="secondary-button" id="previousUsersPageButton">PREVIOUS</button>
@@ -960,6 +1008,7 @@
         const previousUsersPageButton = document.getElementById("previousUsersPageButton");
         const nextUsersPageButton = document.getElementById("nextUsersPageButton");
         const usersPageInfo = document.getElementById("usersPageInfo");
+        const usersPageSize = document.getElementById("usersPageSize");
 
         let usersPage = 1;
         let usersTotalPages = 1;
@@ -1488,7 +1537,7 @@
             if (userServiceFilter.value) params.set("service_category", userServiceFilter.value);
             if (userStatusFilter.value) params.set("status", userStatusFilter.value);
             params.set("page", String(usersPage));
-            params.set("limit", "20");
+            params.set("limit", usersPageSize.value);
             return params.toString();
         }
 
@@ -1516,9 +1565,13 @@
                 usersPage = Number(pagination.page || 1);
                 usersTotalPages = Math.max(1, Number(pagination.totalPages || 1));
 
+                const total = Number(pagination.total || 0);
+                const firstRecord = total === 0 ? 0 : ((usersPage - 1) * Number(pagination.limit || 100)) + 1;
+                const lastRecord = Math.min(usersPage * Number(pagination.limit || 100), total);
+
                 userCount.textContent =
-                    "Registered users: " + Number(pagination.total || 0) +
-                    " | Showing " + usersCache.length + " on this page";
+                    "Total users: " + total +
+                    " | Showing " + firstRecord + "–" + lastRecord;
 
                 usersPageInfo.textContent =
                     "Page " + usersPage + " of " + usersTotalPages;
@@ -1535,44 +1588,69 @@
                     return;
                 }
 
+                const table = document.createElement("table");
+                table.className = "user-table";
+
+                const headers = [
+                    "USER ID",
+                    "FULL NAME",
+                    "MOBILE",
+                    "EMAIL",
+                    "CATEGORY",
+                    "SERVICE TYPE",
+                    "ROLE",
+                    "ACCOUNT STATUS",
+                    "EMAIL VERIFIED",
+                    "MOBILE VERIFIED",
+                    "REGISTERED ON",
+                    "ACTION"
+                ];
+
+                const thead = document.createElement("thead");
+                const headerRow = document.createElement("tr");
+                headers.forEach(label => {
+                    const th = document.createElement("th");
+                    th.textContent = label;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                const tbody = document.createElement("tbody");
+
                 usersCache.forEach(user => {
-                    const card = document.createElement("article");
-                    card.className = "user-card";
+                    const row = document.createElement("tr");
 
-                    card.appendChild(createTextElement(
-                        "h3", "", user.fullName || "Unnamed user"
-                    ));
-                    card.appendChild(createTextElement("p", "", "User ID: " + user.id));
-                    card.appendChild(createTextElement("p", "", "Email: " + (user.email || "Not available")));
-                    card.appendChild(createTextElement("p", "", "Mobile: " + (user.mobile || "Not available")));
+                    const values = [
+                        user.id,
+                        user.fullName || "—",
+                        user.mobile || "—",
+                        user.email || "—",
+                        user.category || "—",
+                        user.serviceCategory
+                            ? String(user.serviceCategory).replaceAll("_", " ")
+                            : "—",
+                        user.role || "USER",
+                        user.status || "—",
+                        user.emailVerified ? "YES" : "NO",
+                        user.mobileVerified ? "YES" : "NO",
+                        user.createdAt || "—"
+                    ];
 
-                    const categoryText = user.category || "Not specified";
-                    const serviceText = user.serviceCategory
-                        ? String(user.serviceCategory).replaceAll("_", " ")
-                        : "Not applicable";
-                    card.appendChild(createTextElement(
-                        "p", "", "Category: " + categoryText + " | " + serviceText
-                    ));
+                    values.forEach((value, index) => {
+                        const cell = document.createElement("td");
+                        cell.textContent = String(value);
 
-                    card.appendChild(createTextElement(
-                        "p", "", "Role: " + (user.role || "USER")
-                    ));
+                        if (index === 7) {
+                            cell.className = user.status === "ACTIVE"
+                                ? "user-status-active"
+                                : "user-status-suspended";
+                        }
 
-                    card.appendChild(createTextElement(
-                        "p",
-                        user.status === "ACTIVE" ? "user-status-active" : "user-status-suspended",
-                        "Account status: " + user.status
-                    ));
+                        row.appendChild(cell);
+                    });
 
-                    card.appendChild(createTextElement(
-                        "p", "",
-                        "Email verified: " + (user.emailVerified ? "YES" : "NO") +
-                        " | Mobile verified: " + (user.mobileVerified ? "YES" : "NO")
-                    ));
-
-                    card.appendChild(createTextElement(
-                        "p", "", "Registered: " + (user.createdAt || "Not available")
-                    ));
+                    const actionCell = document.createElement("td");
 
                     if (user.role !== "SUPER_ADMIN") {
                         const actionButton = document.createElement("button");
@@ -1582,20 +1660,22 @@
                                 ? "user-suspend-button"
                                 : "user-reactivate-button");
                         actionButton.textContent = user.status === "ACTIVE"
-                            ? "SUSPEND ACCOUNT"
-                            : "REACTIVATE ACCOUNT";
+                            ? "SUSPEND"
+                            : "REACTIVATE";
                         actionButton.addEventListener("click", () =>
                             changeUserStatus(user, actionButton)
                         );
-                        card.appendChild(actionButton);
+                        actionCell.appendChild(actionButton);
                     } else {
-                        card.appendChild(createTextElement(
-                            "p", "seat-help", "Protected Super Admin account"
-                        ));
+                        actionCell.textContent = "PROTECTED";
                     }
 
-                    userList.appendChild(card);
+                    row.appendChild(actionCell);
+                    tbody.appendChild(row);
                 });
+
+                table.appendChild(tbody);
+                userList.appendChild(table);
 
             } catch (error) {
                 userCount.textContent = "Unable to load user records.";
@@ -1675,6 +1755,11 @@
                 usersPage = 1;
                 loadUsers();
             }
+        });
+
+        usersPageSize.addEventListener("change", () => {
+            usersPage = 1;
+            loadUsers();
         });
 
         previousUsersPageButton.addEventListener("click", () => {
