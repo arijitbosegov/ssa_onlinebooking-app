@@ -571,6 +571,93 @@
             }
         }
 
+
+
+        .user-table tbody tr {
+            cursor: pointer;
+        }
+
+        .user-table tbody tr:focus {
+            outline: 2px solid #e2b75e;
+            outline-offset: -2px;
+        }
+
+        .user-edit-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: rgba(0, 0, 0, .78);
+            padding: 20px;
+            overflow-y: auto;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-edit-overlay.open {
+            display: flex;
+        }
+
+        .user-edit-dialog {
+            width: 100%;
+            max-width: 760px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            background: #1b304d;
+            border: 1px solid #d9b36c;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 18px 55px rgba(0, 0, 0, .45);
+        }
+
+        .user-edit-dialog h2 {
+            margin-top: 0;
+        }
+
+        .user-edit-readonly {
+            background: #263c57;
+            color: #d0d7e2;
+            border: 1px solid #526982;
+        }
+
+        .user-edit-note {
+            background: #354a63;
+            color: #f3d28e;
+            border-radius: 7px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-top: 15px;
+        }
+
+        .user-edit-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .user-edit-actions button {
+            margin-top: 0;
+        }
+
+        .user-edit-close {
+            float: right;
+            background: #354a63;
+            color: #ffffff;
+            padding: 8px 13px;
+        }
+
+        @media (max-width: 650px) {
+            .user-edit-dialog {
+                padding: 18px;
+            }
+
+            .user-edit-actions button {
+                width: 100%;
+            }
+        }
+
         footer {
             text-align: center;
             padding: 20px;
@@ -960,6 +1047,80 @@
 
     </main>
 
+
+
+        <div class="user-edit-overlay" id="userEditOverlay" aria-hidden="true">
+            <section class="user-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="userEditHeading">
+                <button type="button" class="user-edit-close" id="closeUserEditButton" aria-label="Close">CLOSE</button>
+                <h2 id="userEditHeading">USER DETAILS / EDIT</h2>
+                <p style="color:#d0d7e2; line-height:1.5;">Review and update the registered user's profile. Authentication details cannot be changed from this screen.</p>
+
+                <form id="userEditForm">
+                    <div class="form-grid">
+                        <div>
+                            <label for="editUserId">User ID</label>
+                            <input id="editUserId" class="user-edit-readonly" type="text" readonly>
+                        </div>
+                        <div>
+                            <label for="editUserRole">Role (read-only)</label>
+                            <input id="editUserRole" class="user-edit-readonly" type="text" readonly>
+                        </div>
+                        <div>
+                            <label for="editUserFullName">Full Name *</label>
+                            <input id="editUserFullName" type="text" maxlength="150" required>
+                        </div>
+                        <div>
+                            <label for="editUserMobile">Mobile Number *</label>
+                            <input id="editUserMobile" type="tel" inputmode="numeric" maxlength="15" required>
+                        </div>
+                        <div>
+                            <label for="editUserEmail">Email Address *</label>
+                            <input id="editUserEmail" type="email" maxlength="254" required>
+                        </div>
+                        <div>
+                            <label for="editUserCategory">User Category *</label>
+                            <select id="editUserCategory" required>
+                                <option value="OFFICER">OFFICER</option>
+                                <option value="JCO">JCO</option>
+                                <option value="OR">OR</option>
+                                <option value="DEPENDANT">DEPENDANT</option>
+                                <option value="GUEST">GUEST</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="editUserServiceCategory">Service Classification</label>
+                            <select id="editUserServiceCategory">
+                                <option value="">NOT APPLICABLE</option>
+                                <option value="SERVING">SERVING</option>
+                                <option value="EX_SERVICEMAN">EX-SERVICEMAN</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="editUserEmailVerified">Current Email Verification</label>
+                            <input id="editUserEmailVerified" class="user-edit-readonly" type="text" readonly>
+                        </div>
+                        <div>
+                            <label for="editUserMobileVerified">Mobile Verification</label>
+                            <input id="editUserMobileVerified" class="user-edit-readonly" type="text" readonly>
+                        </div>
+                        <div>
+                            <label for="editUserCreatedAt">Registered On</label>
+                            <input id="editUserCreatedAt" class="user-edit-readonly" type="text" readonly>
+                        </div>
+                    </div>
+
+                    <div class="user-edit-note" id="userEditEmailNote">
+                        If the email address is changed, it will remain pending until the individual user verifies it. The OTP will be sent to the user's currently registered email address.
+                    </div>
+
+                    <div class="user-edit-actions">
+                        <button type="submit" class="primary-button" id="saveUserEditButton">SAVE CHANGES</button>
+                        <button type="button" class="secondary-button" id="cancelUserEditButton">CANCEL</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
     <footer>
         SAPTA SHAKTI AUDITORIUM
         <br>
@@ -1009,6 +1170,13 @@
         const nextUsersPageButton = document.getElementById("nextUsersPageButton");
         const usersPageInfo = document.getElementById("usersPageInfo");
         const usersPageSize = document.getElementById("usersPageSize");
+        const userEditOverlay = document.getElementById("userEditOverlay");
+        const userEditForm = document.getElementById("userEditForm");
+        const saveUserEditButton = document.getElementById("saveUserEditButton");
+        const userEditEmailNote = document.getElementById("userEditEmailNote");
+
+        let editingUserId = null;
+        let editingUserOriginalEmail = "";
 
         let usersPage = 1;
         let usersTotalPages = 1;
@@ -1541,6 +1709,109 @@
             return params.toString();
         }
 
+        function openUserEditor(user) {
+            if (!user || user.role === "SUPER_ADMIN") {
+                showMessage("Super Admin accounts are protected from profile editing.");
+                return;
+            }
+
+            editingUserId = user.id;
+            editingUserOriginalEmail = user.email || "";
+
+            document.getElementById("editUserId").value = user.id;
+            document.getElementById("editUserRole").value = user.role || "USER";
+            document.getElementById("editUserFullName").value = user.fullName || "";
+            document.getElementById("editUserMobile").value = user.mobile || "";
+            document.getElementById("editUserEmail").value = user.pendingEmail || user.email || "";
+            document.getElementById("editUserCategory").value = user.category || "GUEST";
+            document.getElementById("editUserServiceCategory").value = user.serviceCategory || "";
+            document.getElementById("editUserServiceCategory").disabled = user.category === "GUEST";
+            document.getElementById("editUserEmailVerified").value = user.emailVerified ? "VERIFIED" : "NOT VERIFIED";
+            document.getElementById("editUserMobileVerified").value = user.mobileVerified ? "VERIFIED" : "NOT VERIFIED";
+            document.getElementById("editUserCreatedAt").value = user.createdAt || "—";
+
+            userEditEmailNote.textContent = user.pendingEmail
+                ? "A new email address is already pending verification: " + user.pendingEmail + ". Saving a different email will replace that pending request. The OTP will be sent to the currently registered email address."
+                : "If the email address is changed, it will remain pending until the individual user verifies it. The OTP will be sent to the user's currently registered email address.";
+
+            userEditOverlay.classList.add("open");
+            userEditOverlay.setAttribute("aria-hidden", "false");
+            document.getElementById("editUserFullName").focus();
+        }
+
+        function closeUserEditor() {
+            userEditOverlay.classList.remove("open");
+            userEditOverlay.setAttribute("aria-hidden", "true");
+            userEditForm.reset();
+            editingUserId = null;
+            editingUserOriginalEmail = "";
+        }
+
+        document.getElementById("closeUserEditButton").addEventListener("click", closeUserEditor);
+        document.getElementById("cancelUserEditButton").addEventListener("click", closeUserEditor);
+
+        userEditOverlay.addEventListener("click", event => {
+            if (event.target === userEditOverlay) closeUserEditor();
+        });
+
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape" && userEditOverlay.classList.contains("open")) {
+                closeUserEditor();
+            }
+        });
+
+        document.getElementById("editUserCategory").addEventListener("change", event => {
+            const serviceSelect = document.getElementById("editUserServiceCategory");
+            if (event.target.value === "GUEST") {
+                serviceSelect.value = "";
+                serviceSelect.disabled = true;
+            } else {
+                serviceSelect.disabled = false;
+            }
+        });
+
+        userEditForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            if (!editingUserId) return;
+
+            const email = document.getElementById("editUserEmail").value.trim().toLowerCase();
+            const profileData = {
+                user_id: editingUserId,
+                full_name: document.getElementById("editUserFullName").value.trim(),
+                mobile: document.getElementById("editUserMobile").value.trim(),
+                email,
+                category: document.getElementById("editUserCategory").value,
+                service_category: document.getElementById("editUserServiceCategory").value || null
+            };
+
+            saveUserEditButton.disabled = true;
+            saveUserEditButton.textContent = "SAVING...";
+
+            try {
+                const response = await fetch("/api/admin/users", {
+                    method: "PUT",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(profileData)
+                });
+
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to update user profile.");
+                }
+
+                closeUserEditor();
+                showMessage(result.message || "User profile updated successfully.", true);
+                await loadUsers();
+
+            } catch (error) {
+                showMessage(error.message || "Unable to update user profile.");
+            } finally {
+                saveUserEditButton.disabled = false;
+                saveUserEditButton.textContent = "SAVE CHANGES";
+            }
+        });
+
         async function loadUsers() {
             userCount.textContent = "Loading registered users...";
             userList.replaceChildren();
@@ -1620,6 +1891,16 @@
 
                 usersCache.forEach(user => {
                     const row = document.createElement("tr");
+                    row.tabIndex = 0;
+                    row.setAttribute("role", "button");
+                    row.setAttribute("aria-label", "View or edit user " + (user.fullName || user.id));
+                    row.addEventListener("click", () => openUserEditor(user));
+                    row.addEventListener("keydown", event => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openUserEditor(user);
+                        }
+                    });
 
                     const values = [
                         user.id,
@@ -1662,9 +1943,10 @@
                         actionButton.textContent = user.status === "ACTIVE"
                             ? "SUSPEND"
                             : "REACTIVATE";
-                        actionButton.addEventListener("click", () =>
-                            changeUserStatus(user, actionButton)
-                        );
+                        actionButton.addEventListener("click", event => {
+                            event.stopPropagation();
+                            changeUserStatus(user, actionButton);
+                        });
                         actionCell.appendChild(actionButton);
                     } else {
                         actionCell.textContent = "PROTECTED";
