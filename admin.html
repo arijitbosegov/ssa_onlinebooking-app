@@ -1053,7 +1053,7 @@
             <section class="user-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="userEditHeading">
                 <button type="button" class="user-edit-close" id="closeUserEditButton" aria-label="Close">CLOSE</button>
                 <h2 id="userEditHeading">USER DETAILS / EDIT</h2>
-                <p style="color:#d0d7e2; line-height:1.5;">Review and update the registered user's profile. Authentication details cannot be changed from this screen.</p>
+                <p id="userEditIntro" style="color:#d0d7e2; line-height:1.5;">Review and update the registered user's profile. Authentication details cannot be changed from this screen.</p>
 
                 <form id="userEditForm">
                     <div class="form-grid">
@@ -1710,13 +1710,23 @@
         }
 
         function openUserEditor(user) {
-            if (!user || user.role === "SUPER_ADMIN") {
-                showMessage("Super Admin accounts are protected from profile editing.");
-                return;
-            }
+            if (!user) return;
 
-            editingUserId = user.id;
+            const isSuperAdmin = user.role === "SUPER_ADMIN";
+            editingUserId = isSuperAdmin ? null : user.id;
             editingUserOriginalEmail = user.email || "";
+
+            const heading = document.getElementById("userEditHeading");
+            const intro = document.getElementById("userEditIntro");
+            const saveButton = document.getElementById("saveUserEditButton");
+            const cancelButton = document.getElementById("cancelUserEditButton");
+            const editableFields = [
+                "editUserFullName",
+                "editUserMobile",
+                "editUserEmail",
+                "editUserCategory",
+                "editUserServiceCategory"
+            ];
 
             document.getElementById("editUserId").value = user.id;
             document.getElementById("editUserRole").value = user.role || "USER";
@@ -1725,24 +1735,54 @@
             document.getElementById("editUserEmail").value = user.pendingEmail || user.email || "";
             document.getElementById("editUserCategory").value = user.category || "GUEST";
             document.getElementById("editUserServiceCategory").value = user.serviceCategory || "";
-            document.getElementById("editUserServiceCategory").disabled = user.category === "GUEST";
             document.getElementById("editUserEmailVerified").value = user.emailVerified ? "VERIFIED" : "NOT VERIFIED";
             document.getElementById("editUserMobileVerified").value = user.mobileVerified ? "VERIFIED" : "NOT VERIFIED";
             document.getElementById("editUserCreatedAt").value = user.createdAt || "—";
 
-            userEditEmailNote.textContent = user.pendingEmail
-                ? "A new email address is already pending verification: " + user.pendingEmail + ". Saving a different email will replace that pending request. The OTP will be sent to the currently registered email address."
-                : "If the email address is changed, it will remain pending until the individual user verifies it. The OTP will be sent to the user's currently registered email address.";
+            editableFields.forEach(id => {
+                document.getElementById(id).disabled = isSuperAdmin;
+            });
+
+            document.getElementById("editUserServiceCategory").disabled =
+                isSuperAdmin || user.category === "GUEST";
+
+            if (isSuperAdmin) {
+                heading.textContent = "SUPER ADMIN ACCOUNT DETAILS";
+                intro.textContent = "This account is protected. Details are displayed in read-only mode; profile changes and account suspension are not permitted here.";
+                userEditEmailNote.textContent = "SUPER ADMIN PROTECTION: This account cannot be edited or suspended through User Management.";
+                saveButton.style.display = "none";
+                cancelButton.textContent = "CLOSE";
+            } else {
+                heading.textContent = "USER DETAILS / EDIT";
+                intro.textContent = "Review and update the registered user's profile. Authentication details cannot be changed from this screen.";
+                userEditEmailNote.textContent = user.pendingEmail
+                    ? "A new email address is already pending verification: " + user.pendingEmail + ". Saving a different email will replace that pending request. The OTP will be sent to the currently registered email address."
+                    : "If the email address is changed, it will remain pending until the individual user verifies it. The OTP will be sent to the user's currently registered email address.";
+                saveButton.style.display = "inline-block";
+                cancelButton.textContent = "CANCEL";
+            }
 
             userEditOverlay.classList.add("open");
             userEditOverlay.setAttribute("aria-hidden", "false");
-            document.getElementById("editUserFullName").focus();
+            document.getElementById(isSuperAdmin ? "closeUserEditButton" : "editUserFullName").focus();
         }
 
         function closeUserEditor() {
             userEditOverlay.classList.remove("open");
             userEditOverlay.setAttribute("aria-hidden", "true");
             userEditForm.reset();
+            [
+                "editUserFullName",
+                "editUserMobile",
+                "editUserEmail",
+                "editUserCategory",
+                "editUserServiceCategory"
+            ].forEach(id => {
+                document.getElementById(id).disabled = false;
+            });
+            document.getElementById("saveUserEditButton").style.display = "inline-block";
+            document.getElementById("cancelUserEditButton").textContent = "CANCEL";
+            document.getElementById("userEditHeading").textContent = "USER DETAILS / EDIT";
             editingUserId = null;
             editingUserOriginalEmail = "";
         }
